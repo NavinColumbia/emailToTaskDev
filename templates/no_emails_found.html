@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}No Emails Found - Taskflow{% endblock %}
+
+{% block content %}
+<div class="notion-slide-up">
+    <div class="notion-card">
+        <div class="notion-card-header notion-text-center">
+            <h1 class="notion-card-title">
+                <i class="bi bi-exclamation-triangle notion-icon" style="color: var(--notion-warning);"></i>
+                No Emails Found
+            </h1>
+        </div>
+        <div class="notion-grid notion-grid-2 notion-mb-xl">
+            <div class="notion-card">
+                <div class="notion-card-header">
+                    <h3 class="notion-card-title">
+                        <i class="bi bi-question-circle notion-icon" style="color: var(--notion-text-secondary);"></i>
+                        Setup Guide
+                    </h3>
+                </div>
+                <div>
+                    <h4>Create Gmail Label</h4>
+                    <ol class="notion-mb-md">
+                        <li>Go to Gmail Settings</li>
+                        <li>Click "Labels" tab</li>
+                        <li>Create new label: "todoist-forward"</li>
+                    </ol>
+                    
+                    <h4>Set Up Email Forwarding</h4>
+                    <ol class="notion-mb-md">
+                        <li>Create Gmail filter</li>
+                        <li>Apply "todoist-forward" label</li>
+                        <li>Forward emails to yourself</li>
+                    </ol>
+                    
+                </div>
+            </div>
+            <div class="notion-card">
+                <div class="notion-card-header">
+                    <h3 class="notion-card-title">
+                        <i class="bi bi-lightbulb notion-icon" style="color: var(--notion-warning);"></i>
+                        Quick Solutions
+                    </h3>
+                </div>
+                <div class="notion-flex notion-flex-column notion-gap-sm">
+                    <button class="notion-btn notion-btn-primary" onclick="tryInbox()">
+                        <i class="bi bi-inbox notion-icon"></i> Try Inbox Emails
+                    </button>
+                    <button class="notion-btn notion-btn-primary" onclick="tryUnread()">
+                        <i class="bi bi-envelope notion-icon"></i> Try Unread Emails
+                    </button>
+                    <button class="notion-btn notion-btn-primary" onclick="tryRecent()">
+                        <i class="bi bi-clock notion-icon"></i> Try Recent Emails (7 days)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Store the original search query
+let originalQuery = 'label:todoist-forward';
+
+// Quick action functions
+function tryInbox() {
+    performSearch('in:inbox', '', 5);
+}
+
+function tryUnread() {
+    performSearch('is:unread', '', 5);
+}
+
+function tryRecent() {
+    performSearch('in:inbox', '7d', 5);
+}
+
+
+function performSearch(query, window, max) {
+    
+    // Perform the search with proper parameters
+    const params = new URLSearchParams({
+        provider: 'todoist',
+        label: '', // Clear the label to search inbox/unread instead
+        window: window,
+        max: max
+    });
+    
+    // Add the query parameter for the search
+    if (query) {
+        params.append('q', query);
+    }
+    
+    fetch(`/api/fetch-emails?${params}`, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json'
+        }
+    })
+    .then(response => {
+        if (response.redirected || response.status === 302) {
+            try {
+                window.location.href = response.url;
+            } catch (e) {
+                document.location.href = response.url;
+            }
+            return;
+        }
+        return response.json();
+    })
+    .then(data => {        
+        if (data && data.processed > 0) {
+            // Redirect to results page - flash message will be handled server-side
+            try {
+                window.location.href = '/fetch-emails';
+            } catch (e) {
+                document.location.href = '/fetch-emails';
+            }
+        } else {
+            // Still no results, redirect back to no-emails-found with flash message
+            setTimeout(() => {
+                try {
+                    window.location.href = '/no-emails-found?message=no_results';
+                } catch (e) {
+                    document.location.href = '/no-emails-found?message=no_results';
+                }
+            }, 100);
+        }
+    })
+    .catch(error => {
+        // Redirect to no-emails-found with error message
+        setTimeout(() => {
+            try {
+                window.location.href = '/no-emails-found?message=error&error=' + encodeURIComponent(error.message);
+            } catch (e) {
+                document.location.href = '/no-emails-found?message=error&error=' + encodeURIComponent(error.message);
+            }
+        }, 100);
+    });
+}
+
+
+function goBack() {
+    try {
+        window.location.href = '/fetch-emails';
+    } catch (e) {
+        console.error('Redirect error:', e);
+        document.location.href = '/fetch-emails';
+    }
+}
+
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', function() {
+    // Page is ready
+});
+</script>
+{% endblock %}

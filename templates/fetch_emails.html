@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block title %}Fetch Emails - Taskflow{% endblock %}
+
+{% block content %}
+<div class="notion-slide-up">
+    <div class="notion-card">
+        <div class="notion-card-header">
+            <h1 class="notion-card-title">
+                <i class="bi bi-download notion-icon" style="color: var(--notion-accent);"></i>
+                Fetch and Process Emails
+            </h1>
+            <p class="notion-card-subtitle">Configure your search parameters and process emails from your Gmail account.</p>
+        </div>
+        
+        <form id="fetchForm" class="notion-mb-xl">
+            <div class="notion-grid notion-grid-4">
+                <div class="notion-form-group">
+                    <label for="provider" class="notion-label">Task Provider</label>
+                    <select class="notion-select" id="provider" name="provider">
+                        <option value="todoist" selected>Todoist</option>
+                    </select>
+                </div>
+                <div class="notion-form-group">
+                    <label for="label" class="notion-label">Gmail Label</label>
+                    <input type="text" class="notion-input" id="label" name="label" value="todoist-forward" placeholder="Gmail label">
+                </div>
+                <div class="notion-form-group">
+                    <label for="max" class="notion-label">Max Emails</label>
+                    <input type="number" class="notion-input" id="max" name="max" value="10" min="1" max="100">
+                </div>
+                <div class="notion-form-group">
+                    <label for="window" class="notion-label">Time Window</label>
+                    <select class="notion-select" id="window" name="window">
+                        <option value="">All emails</option>
+                        <option value="1d">Last 24 hours</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                    </select>
+                </div>
+            </div>
+            <div class="notion-flex notion-gap-md">
+                <button type="submit" class="notion-btn notion-btn-primary notion-btn-lg" id="fetchBtn">
+                    <i class="bi bi-download notion-icon"></i> Fetch Emails
+                </button>
+            </div>
+        </form>
+
+        <div id="loadingIndicator" class="notion-loading notion-hidden">
+            <div class="notion-spinner"></div>
+            <span>Processing emails...</span>
+        </div>
+
+        <div id="results" class="notion-hidden">
+            <div class="notion-card">
+                <div class="notion-card-header">
+                    <h3 class="notion-card-title">
+                        <i class="bi bi-check-circle notion-icon" style="color: var(--notion-success);"></i>
+                        Processing Complete
+                    </h3>
+                </div>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+
+        <div id="error" class="notion-alert notion-alert-error notion-hidden">
+            <i class="bi bi-exclamation-triangle notion-icon"></i>
+            <div>
+                <h4>Error</h4>
+                <div id="errorContent"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('fetchForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const params = new URLSearchParams(formData);
+    
+    // Show loading indicator
+    document.getElementById('loadingIndicator').classList.remove('notion-hidden');
+    document.getElementById('results').classList.add('notion-hidden');
+    document.getElementById('error').classList.add('notion-hidden');
+    document.getElementById('fetchBtn').disabled = true;
+    
+    try {
+        const response = await fetch(`/api/fetch-emails?${params}`, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json, text/html'
+            }
+        });
+        
+        // Check if response is a redirect (status 302)
+        if (response.redirected || response.status === 302) {
+            window.location.href = response.url;
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            if (data.processed === 0) {
+                // Redirect to no emails found page
+                window.location.href = '/no-emails-found';
+            } else {
+                displayResults(data);
+            }
+        } else {
+            displayError(data.error || 'An error occurred while processing emails');
+        }
+    } catch (error) {
+        displayError('Network error: ' + error.message);
+    } finally {
+        document.getElementById('loadingIndicator').classList.add('notion-hidden');
+        document.getElementById('fetchBtn').disabled = false;
+    }
+});
+
+function displayResults(data) {
+    const resultsDiv = document.getElementById('resultsContent');
+    
+    let html = `
+        <div class="notion-grid notion-grid-2 notion-mb-lg">
+            <div class="notion-card">
+                <div class="notion-card-header">
+                    <h4 class="notion-card-title">
+                        <i class="bi bi-search notion-icon"></i>
+                        Query Used
+                    </h4>
+                </div>
+                <div class="notion-code">${data.query}</div>
+            </div>
+            <div class="notion-card">
+                <div class="notion-card-header">
+                    <h4 class="notion-card-title">
+                        <i class="bi bi-check-circle notion-icon"></i>
+                        Tasks Created
+                    </h4>
+                </div>
+                <div class="notion-text-center">
+                    <span class="notion-badge notion-badge-success" style="font-size: 1.5rem; padding: var(--notion-space-md) var(--notion-space-lg);">${data.processed}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    if (data.created && data.created.length > 0) {
+        html += '<div class="notion-card">';
+        html += '<div class="notion-card-header">';
+        html += '<h4 class="notion-card-title"><i class="bi bi-list-ul notion-icon"></i> Created Tasks</h4>';
+        html += '</div>';
+        html += '<table class="notion-table">';
+        html += '<thead><tr><th>Subject</th><th>Provider</th><th>Status</th></tr></thead>';
+        html += '<tbody>';
+        
+        data.created.forEach(task => {
+            const subject = task.task.content || task.task.subject || 'No subject';
+            html += `
+                <tr>
+                    <td>${subject}</td>
+                    <td><span class="notion-badge notion-badge-primary">${task.provider}</span></td>
+                    <td><span class="notion-badge notion-badge-success">Created</span></td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+    } else {
+        html += '<div class="notion-alert notion-alert-info"><i class="bi bi-info-circle notion-icon"></i><span>No new emails found to process.</span></div>';
+    }
+    
+    resultsDiv.innerHTML = html;
+    document.getElementById('results').classList.remove('notion-hidden');
+}
+
+function displayError(message) {
+    document.getElementById('errorContent').textContent = message;
+    document.getElementById('error').classList.remove('notion-hidden');
+}
+
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `notion-alert notion-alert-${type} notion-fade-in`;
+    alertDiv.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} notion-icon"></i>
+        <span>${message}</span>
+    `;
+    
+    const container = document.querySelector('.notion-container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Load saved settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedSettings = localStorage.getItem('emailToTaskSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        Object.keys(settings).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                element.value = settings[key];
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

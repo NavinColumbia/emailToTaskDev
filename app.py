@@ -4,7 +4,7 @@ import json
 import base64
 from datetime import datetime, timezone
 
-from flask import Flask, request, redirect, session, url_for, jsonify
+from flask import Flask, request, redirect, session, url_for, jsonify, render_template, flash
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -163,13 +163,7 @@ def dispatch_task(provider: str, payload: dict) -> dict:
 
 @app.route("/")
 def index():
-    if "credentials" in session:
-        return (
-            "You are logged in! "
-            '<a href="/fetch-emails">Fetch Emails</a> or '
-            '<a href="/logout">Logout</a>'
-        )
-    return 'Welcome! <a href="/authorize">Login with Google</a>'
+    return render_template("index.html")
 
 
 @app.route("/authorize")
@@ -207,30 +201,64 @@ def oauth2callback():
         "client_secret": credentials.client_secret,
         "scopes": credentials.scopes,
     }
+    flash("Successfully connected to Gmail!", "success")
     return redirect(url_for("index"))
 
 
 @app.route("/logout")
 def logout():
     session.pop("credentials", None)
+    flash("You have been logged out successfully.", "info")
     return redirect(url_for("index"))
 
 
-@app.route("/fetch-emails", methods=["POST", "GET"])
+@app.route("/fetch-emails")
+def fetch_emails_page():
+    if "credentials" not in session:
+        flash("Please log in with Google first.", "warning")
+        return redirect(url_for("authorize"))
+    return render_template("fetch_emails.html")
+
+
+@app.route("/no-emails-found")
+def no_emails_found():
+    if "credentials" not in session:
+        flash("Please log in with Google first.", "warning")
+        return redirect(url_for("authorize"))
+    
+    # Check if this is a redirect from a failed search
+    if request.args.get("message") == "no_results":
+        flash("Still no emails found. Try a different search.", "warning")
+    elif request.args.get("message") == "error":
+        error_msg = request.args.get("error", "An unknown error occurred")
+        flash(f"Error: {error_msg}", "error")
+    
+    return render_template("no_emails_found.html")
+
+
+@app.route("/api/fetch-emails", methods=["POST", "GET"])
 def fetch_emails():
     service = get_gmail_service()
     if not service:
-        return redirect(url_for("authorize"))
+        return jsonify({"error": "Not authenticated. Please log in first."}), 401
 
     provider = request.args.get("provider", DEFAULT_PROVIDER)
     label = request.args.get("label", FORWARD_LABEL)
     window = request.args.get("window")
+    custom_query = request.args.get("q")  # Support custom Gmail queries
     max_msgs = int(request.args.get("max", DEFAULT_FETCH_LIMIT))
 
-    query_parts = [f"label:{label}"] if label else []
-    if window:
-        query_parts.append(f"newer_than:{window}")
-    query = " ".join(query_parts) or "in:inbox"
+    if custom_query:
+        # Use custom query if provided
+        query = custom_query
+        if window:
+            query += f" newer_than:{window}"
+    else:
+        # Build query from label and window
+        query_parts = [f"label:{label}"] if label else []
+        if window:
+            query_parts.append(f"newer_than:{window}")
+        query = " ".join(query_parts) or "in:inbox"
 
     ids = gmail_list_ids(service, q=query, max_list=max_msgs)
 
@@ -265,13 +293,18 @@ def fetch_emails():
 
     save_processed_ids(processed_ids)
 
-    return jsonify(
-        {
-            "processed": len(created_tasks),
-            "query": query,
-            "created": created_tasks,
-        }
-    )
+    result = {
+        "processed": len(created_tasks),
+        "query": query,
+        "created": created_tasks,
+    }
+    
+    # If no emails were processed and this is a web request, redirect to help page
+    if len(created_tasks) == 0 and request.headers.get('Accept', '').find('text/html') != -1:
+        flash("No emails found with the current search criteria.", "warning")
+        return redirect(url_for("no_emails_found"))
+    
+    return jsonify(result)
 
 
 if __name__ == "__main__":

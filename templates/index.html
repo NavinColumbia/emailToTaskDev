@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Taskflow{% endblock %}
+
+{% block content %}
+<div class="notion-slide-up">
+    {% if session.credentials %}
+        <div class="notion-card">
+            <div class="notion-card-header">
+                <h1 class="notion-card-title">
+                    <i class="bi bi-check-circle notion-icon" style="color: var(--notion-success);"></i>
+                    Connected to Gmail
+                </h1>
+                <p class="notion-card-subtitle">You're successfully connected! You can now fetch emails and convert them to tasks.</p>
+            </div>
+            
+            <div class="notion-grid notion-grid-2">
+                <div class="notion-card">
+                    <div class="notion-text-center">
+                        <i class="bi bi-download notion-icon-xl" style="color: var(--notion-accent);"></i>
+                        <h3 class="notion-mt-md">Fetch Emails</h3>
+                        <p>Process emails from your Gmail account and convert them to tasks.</p>
+                        <a href="{{ url_for('fetch_emails') }}" class="notion-btn notion-btn-primary notion-btn-lg">
+                            <i class="bi bi-download notion-icon"></i> Fetch Emails
+                        </a>
+                    </div>
+                </div>
+                <div class="notion-card">
+                    <div class="notion-text-center">
+                        <i class="bi bi-sliders notion-icon-xl" style="color: var(--notion-text-secondary);"></i>
+                        <h3 class="notion-mt-md">Settings</h3>
+                        <p>Configure your email processing preferences and task provider.</p>
+                        <button class="notion-btn notion-btn-lg" onclick="showSettings()">
+                            <i class="bi bi-sliders notion-icon"></i> Settings
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="notion-card notion-text-center" style="max-width: 500px; margin: 0 auto;">
+            <div class="notion-card-header">
+                <h1 class="notion-card-title" style="font-size: 2rem; margin-bottom: var(--notion-space-sm); justify-content: center;">
+                    <i class="bi bi-envelope-check notion-icon-xl" style="color: var(--notion-text);"></i>
+                    Taskflow
+                </h1>
+                <p class="lead" style="font-size: 1rem; margin-bottom: var(--notion-space-md);">
+                    Convert Gmail emails to tasks automatically
+                </p>
+                <div style="display: flex; justify-content: center; gap: var(--notion-space-lg);">
+                    <div style="text-align: center;">
+                        <i class="bi bi-shield-check notion-icon-lg" style="color: var(--notion-success);"></i>
+                        <p style="margin: var(--notion-space-xs) 0 0 0; font-size: 0.75rem; color: var(--notion-text-tertiary);">Secure</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <i class="bi bi-lightning notion-icon-lg" style="color: var(--notion-accent);"></i>
+                        <p style="margin: var(--notion-space-xs) 0 0 0; font-size: 0.75rem; color: var(--notion-text-tertiary);">Fast</p>
+                    </div>
+                    <div style="text-align: center;">
+                        <i class="bi bi-check-square notion-icon-lg" style="color: var(--notion-success);"></i>
+                        <p style="margin: var(--notion-space-xs) 0 0 0; font-size: 0.75rem; color: var(--notion-text-tertiary);">Simple</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: var(--notion-space-lg);">
+                <p style="font-size: 0.875rem; color: var(--notion-text-secondary); margin: 0;">
+                    Connect your Gmail account to start converting forwarded emails into organized tasks
+                </p>
+            </div>
+            
+            <div class="notion-text-center">
+                <a href="{{ url_for('authorize') }}" class="notion-btn notion-btn-primary notion-btn-lg" style="font-size: 16px; padding: 12px 24px;">
+                    <i class="bi bi-google notion-icon"></i> Connect with Google
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Settings Modal -->
+<div class="notion-modal notion-hidden" id="settingsModal">
+    <div class="notion-modal-content">
+        <div class="notion-modal-header">
+            <h3 class="notion-modal-title">
+                <i class="bi bi-sliders notion-icon"></i> Settings
+            </h3>
+            <button type="button" class="notion-btn notion-btn-sm" onclick="hideSettings()">
+                <i class="bi bi-x notion-icon"></i>
+            </button>
+        </div>
+        <div class="notion-modal-body">
+            <form id="settingsForm">
+                <div class="notion-form-group">
+                    <label for="provider" class="notion-label">Task Provider</label>
+                    <select class="notion-select" id="provider" name="provider">
+                        <option value="todoist" selected>Todoist</option>
+                    </select>
+                </div>
+                <div class="notion-form-group">
+                    <label for="label" class="notion-label">Gmail Label</label>
+                    <input type="text" class="notion-input" id="label" name="label" value="todoist-forward" placeholder="Gmail label to process">
+                </div>
+                <div class="notion-form-group">
+                    <label for="max" class="notion-label">Max Emails to Process</label>
+                    <input type="number" class="notion-input" id="max" name="max" value="10" min="1" max="100">
+                </div>
+                <div class="notion-form-group">
+                    <label for="window" class="notion-label">Time Window</label>
+                    <select class="notion-select" id="window" name="window">
+                        <option value="">All emails</option>
+                        <option value="1d">Last 24 hours</option>
+                        <option value="7d">Last 7 days</option>
+                        <option value="30d">Last 30 days</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="notion-modal-footer">
+            <button type="button" class="notion-btn" onclick="hideSettings()">Cancel</button>
+            <button type="button" class="notion-btn notion-btn-primary" onclick="saveSettings()">Save Settings</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showSettings() {
+    const modal = document.getElementById('settingsModal');
+    modal.classList.remove('notion-hidden');
+    modal.classList.add('notion-fade-in');
+}
+
+function hideSettings() {
+    const modal = document.getElementById('settingsModal');
+    modal.classList.add('notion-hidden');
+    modal.classList.remove('notion-fade-in');
+}
+
+function saveSettings() {
+    const form = document.getElementById('settingsForm');
+    const formData = new FormData(form);
+    const settings = Object.fromEntries(formData);
+    
+    // Store settings in localStorage
+    localStorage.setItem('emailToTaskSettings', JSON.stringify(settings));
+    
+    // Close modal
+    hideSettings();
+    
+    // Show success message
+    showAlert('Settings saved successfully!', 'success');
+}
+
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `notion-alert notion-alert-${type} notion-fade-in`;
+    alertDiv.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} notion-icon"></i>
+        <span>${message}</span>
+    `;
+    
+    const container = document.querySelector('.notion-container');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('settingsModal');
+    if (e.target === modal) {
+        hideSettings();
+    }
+});
+
+// Load saved settings on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const savedSettings = localStorage.getItem('emailToTaskSettings');
+    if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        Object.keys(settings).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                element.value = settings[key];
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

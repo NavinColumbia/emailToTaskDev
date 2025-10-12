@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Taskflow{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="notion-page">
+        <nav class="notion-navbar">
+            <div class="container">
+                <a class="notion-brand" href="{{ url_for('index') }}">
+                    <i class="bi bi-envelope-check notion-icon"></i> Taskflow
+                </a>
+                <div class="notion-nav-links">
+                    {% if session.credentials %}
+                        <a class="notion-nav-link" href="{{ url_for('fetch_emails') }}">
+                            <i class="bi bi-download notion-icon"></i> Fetch Emails
+                        </a>
+                        <a class="notion-nav-link" href="#" onclick="showSetupGuide(); return false;">
+                            <i class="bi bi-question-circle notion-icon"></i> Setup Guide
+                        </a>
+                        <a class="notion-nav-link" href="{{ url_for('logout') }}">
+                            <i class="bi bi-box-arrow-right notion-icon"></i> Logout
+                        </a>
+                    {% else %}
+                        <a class="notion-nav-link" href="{{ url_for('authorize') }}">
+                            <i class="bi bi-google notion-icon"></i> Login with Google
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        <main class="notion-container notion-main">
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Fixed Flash Messages Container -->
+        <div id="flash-container" style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 1000; display: flex; flex-direction: column; gap: 10px; max-width: 400px; width: 90%;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="notion-alert notion-alert-{{ 'error' if category == 'error' else category }}" style="position: relative; margin: 0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); border-radius: 8px; color: white;" data-category="{{ category }}">
+                            <i class="bi bi-{{ 'exclamation-triangle' if category == 'error' else 'check-circle' if category == 'success' else 'info-circle' }} notion-icon"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Setup Guide Modal -->
+        <div class="notion-modal notion-hidden" id="setupGuideModal">
+            <div class="notion-modal-content" style="max-width: 600px;">
+                <div class="notion-modal-header">
+                    <h3 class="notion-modal-title">
+                        <i class="bi bi-question-circle notion-icon"></i> Setup Guide
+                    </h3>
+                    <button type="button" class="notion-btn notion-btn-sm" onclick="hideSetupGuide()">
+                        <i class="bi bi-x notion-icon"></i>
+                    </button>
+                </div>
+                <div class="notion-modal-body">
+                    <div class="notion-card">
+                        <div>
+                            <h4>Create Gmail Label</h4>
+                            <ol class="notion-mb-md">
+                                <li>Go to Gmail Settings</li>
+                                <li>Click "Labels" tab</li>
+                                <li>Create new label: "todoist-forward"</li>
+                            </ol>
+                            
+                            <h4>Set Up Email Forwarding</h4>
+                            <ol class="notion-mb-md">
+                                <li>Create Gmail filter</li>
+                                <li>Apply "todoist-forward" label</li>
+                                <li>Forward emails to yourself</li>
+                            </ol>
+                            
+                        </div>
+                    </div>
+                </div>
+                <div class="notion-modal-footer">
+                    <button type="button" class="notion-btn" onclick="hideSetupGuide()">Close</button>
+                </div>
+            </div>
+        </div>
+
+
+        <footer class="notion-footer">
+            <div class="notion-container">
+                <p class="notion-mb-0">Taskflow Converter</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+    
+    <script>
+    // Setup Guide Modal Functions
+    function showSetupGuide() {
+        const modal = document.getElementById('setupGuideModal');
+        modal.classList.remove('notion-hidden');
+        modal.classList.add('notion-fade-in');
+    }
+
+    function hideSetupGuide() {
+        const modal = document.getElementById('setupGuideModal');
+        modal.classList.add('notion-hidden');
+        modal.classList.remove('notion-fade-in');
+    }
+
+
+    // Auto-dismiss flash messages after 3 seconds
+    document.addEventListener('DOMContentLoaded', function() {
+        const flashContainer = document.getElementById('flash-container');
+        const alerts = flashContainer.querySelectorAll('.notion-alert');
+        
+        alerts.forEach(function(alert) {
+            // Set background color based on category
+            const category = alert.getAttribute('data-category');
+            let backgroundColor;
+            
+            switch(category) {
+                case 'error':
+                    backgroundColor = 'rgba(225, 98, 89, 1)';
+                    break;
+                case 'success':
+                    backgroundColor = 'rgba(15, 123, 15, 1)';
+                    break;
+                case 'warning':
+                    backgroundColor = 'rgba(217, 115, 13, 1)';
+                    break;
+                default:
+                    backgroundColor = 'rgba(35, 131, 226, 1)';
+            }
+            
+            alert.style.backgroundColor = backgroundColor;
+            
+            // Add slide-up animation
+            alert.style.transform = 'translateY(100px)';
+            
+            // Animate in
+            setTimeout(function() {
+                alert.style.transition = 'all 0.3s ease-out';
+                alert.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Auto-dismiss after 3 seconds
+            setTimeout(function() {
+                alert.style.transform = 'translateY(100px)';
+                setTimeout(function() {
+                    alert.remove();
+                }, 300);
+            }, 3000);
+        });
+    });
+
+    // Close modals when clicking outside
+    document.addEventListener('click', function(e) {
+        const setupModal = document.getElementById('setupGuideModal');
+        
+        if (e.target === setupModal) {
+            hideSetupGuide();
+        }
+    });
+    </script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>
