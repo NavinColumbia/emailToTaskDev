@@ -1,0 +1,17 @@
+# Virtual environments
+.venv/
+
+# Bytecode caches
+__pycache__/
+
+# Environment configuration
+.env
+
+# Local data store
+processed.json
+
+# macOS cruft
+.DS_Store
+
+# client_secret.json for Google API
+client_secret.json
