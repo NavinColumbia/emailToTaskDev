@@ -189,7 +189,6 @@ p {
   border: 1px solid var(--notion-border);
   border-radius: var(--notion-radius-lg);
   padding: var(--notion-space-xl);
-  margin-bottom: var(--notion-space-lg);
   box-shadow: var(--notion-shadow-sm);
 }
 

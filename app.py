@@ -24,6 +24,7 @@ REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/oauth2cal
 
 FORWARD_LABEL = os.getenv("GMAIL_FORWARD_LABEL", "todoist-forward")
 PROCESSED_STORE = os.getenv("PROCESSED_STORE", "processed.json")
+TASKS_STORE = os.getenv("TASKS_STORE", "tasks_history.json")
 DEFAULT_PROVIDER = os.getenv("DEFAULT_TASK_PROVIDER", "todoist")
 DEFAULT_FETCH_LIMIT = int(os.getenv("FETCH_LIMIT", "10"))
 
@@ -69,6 +70,22 @@ def load_processed_ids() -> set[str]:
 def save_processed_ids(message_ids: set[str]) -> None:
     with open(PROCESSED_STORE, "w", encoding="utf-8") as fh:
         json.dump(sorted(message_ids), fh, indent=2)
+
+
+def load_tasks_history() -> list[dict]:
+    if not os.path.exists(TASKS_STORE):
+        return []
+    try:
+        with open(TASKS_STORE, "r", encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, list) else []
+    except Exception:
+        return []
+
+
+def save_tasks_history(tasks: list[dict]) -> None:
+    with open(TASKS_STORE, "w", encoding="utf-8") as fh:
+        json.dump(tasks, fh, indent=2)
 
 
 def get_header(payload: dict, name: str) -> str | None:
@@ -163,7 +180,7 @@ def dispatch_task(provider: str, payload: dict) -> dict:
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("home.html")
 
 
 @app.route("/authorize")
@@ -223,7 +240,6 @@ def fetch_emails_page():
 @app.route("/no-emails-found")
 def no_emails_found():
     if "credentials" not in session:
-        flash("Please log in with Google first.", "warning")
         return redirect(url_for("authorize"))
     
     # Check if this is a redirect from a failed search
@@ -236,17 +252,88 @@ def no_emails_found():
     return render_template("no_emails_found.html")
 
 
+@app.route("/email-results")
+def email_results():
+    if "credentials" not in session:
+        return redirect(url_for("authorize"))
+    
+    # Get data from session
+    results_data = session.get("email_results")
+    if not results_data:
+        flash("No results found. Please process emails first.", "warning")
+        return redirect(url_for("fetch_emails_page"))
+    
+    # Clear the results from session after displaying
+    session.pop("email_results", None)
+    
+    return render_template("email_results.html", 
+                         processed_count=results_data["processed_count"],
+                         query=results_data["query"],
+                         created_tasks=results_data["created_tasks"])
+
+
+def migrate_existing_processed_tasks():
+    """Migrate existing processed tasks to task history if not already present"""
+    processed_ids = load_processed_ids()
+    tasks_history = load_tasks_history()
+    
+    # Get existing message IDs from task history
+    existing_message_ids = {task.get("message_id") for task in tasks_history}
+    
+    # Find processed IDs that don't have task history entries
+    missing_ids = processed_ids - existing_message_ids
+    
+    if missing_ids:
+        # Create placeholder entries for missing tasks
+        for message_id in missing_ids:
+            placeholder_task = {
+                "message_id": message_id,
+                "provider": DEFAULT_PROVIDER,
+                "task": {
+                    "content": "Previously processed email",
+                    "subject": "Previously processed email",
+                    "sender": "Unknown"
+                },
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "query": "Previously processed (migrated)"
+            }
+            tasks_history.append(placeholder_task)
+        
+        # Save updated task history
+        save_tasks_history(tasks_history)
+        print(f"Migrated {len(missing_ids)} existing processed tasks to task history")
+
+
+@app.route("/view-all-results")
+def view_all_results():
+    if "credentials" not in session:
+        return redirect(url_for("authorize"))
+    
+    # Migrate existing processed tasks to task history
+    migrate_existing_processed_tasks()
+    
+    # Load all tasks from history
+    tasks_history = load_tasks_history()
+    
+    # Sort by creation date (newest first)
+    tasks_history.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    
+    return render_template("all_results.html", 
+                         tasks_history=tasks_history,
+                         total_tasks=len(tasks_history))
+
+
 @app.route("/api/fetch-emails", methods=["POST", "GET"])
 def fetch_emails():
     service = get_gmail_service()
     if not service:
         return jsonify({"error": "Not authenticated. Please log in first."}), 401
 
-    provider = request.args.get("provider", DEFAULT_PROVIDER)
-    label = request.args.get("label", FORWARD_LABEL)
-    window = request.args.get("window")
-    custom_query = request.args.get("q")  # Support custom Gmail queries
-    max_msgs = int(request.args.get("max", DEFAULT_FETCH_LIMIT))
+    provider = request.values.get("provider", DEFAULT_PROVIDER)
+    label = request.values.get("label", FORWARD_LABEL)
+    window = request.values.get("window")
+    custom_query = request.values.get("q")  # Support custom Gmail queries
+    max_msgs = int(request.values.get("max", DEFAULT_FETCH_LIMIT))
 
     if custom_query:
         # Use custom query if provided
@@ -264,9 +351,11 @@ def fetch_emails():
 
     processed_ids = load_processed_ids()
     created_tasks = []
+    already_processed_count = 0
 
     for message_id in ids:
         if message_id in processed_ids:
+            already_processed_count += 1
             continue
 
         msg = (
@@ -293,16 +382,48 @@ def fetch_emails():
 
     save_processed_ids(processed_ids)
 
+    # Save task history
+    if created_tasks:
+        tasks_history = load_tasks_history()
+        for task in created_tasks:
+            task_entry = {
+                "message_id": task["message_id"],
+                "provider": task["provider"],
+                "task": task["task"],
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "query": query
+            }
+            tasks_history.append(task_entry)
+        save_tasks_history(tasks_history)
+
     result = {
         "processed": len(created_tasks),
         "query": query,
         "created": created_tasks,
+        "total_found": len(ids),
+        "already_processed": already_processed_count,
     }
     
-    # If no emails were processed and this is a web request, redirect to help page
-    if len(created_tasks) == 0 and request.headers.get('Accept', '').find('text/html') != -1:
-        flash("No emails found with the current search criteria.", "warning")
-        return redirect(url_for("no_emails_found"))
+    # Handle different scenarios for web requests
+    if request.accept_mimetypes.accept_html:
+        if len(created_tasks) == 0 and already_processed_count == 0:
+            # No emails found at all
+            flash("No emails found with the current search criteria.", "warning")
+            return redirect(url_for("no_emails_found"))
+        elif len(created_tasks) == 0 and already_processed_count > 0:
+            # Emails found but already processed - stay on fetch_emails page
+            flash(f"Found {already_processed_count} emails, but they were already processed. No new tasks created.", "info")
+            return redirect(url_for("fetch_emails_page"))
+        else:
+            # New emails were processed
+            flash(f"Successfully processed {len(created_tasks)} emails!", "success")
+            # Store results in session for the results page
+            session["email_results"] = {
+                "processed_count": len(created_tasks),
+                "query": query,
+                "created_tasks": created_tasks
+            }
+            return redirect(url_for("email_results"))
     
     return jsonify(result)
 

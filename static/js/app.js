@@ -99,9 +99,12 @@ const settingsManager = {
 // Email processing
 const emailProcessor = {
     fetch: async function(params) {
+        console.log('🚀 Starting email fetch with params:', params);
         const queryString = new URLSearchParams(params).toString();
+        console.log('📝 Query string:', queryString);
         
         try {
+            console.log('🌐 Making fetch request to:', `/api/fetch-emails?${queryString}`);
             const response = await fetch(`/api/fetch-emails?${queryString}`, {
                 method: 'POST',
                 headers: {
@@ -110,95 +113,70 @@ const emailProcessor = {
                 }
             });
             
+            console.log('📡 Response received:', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok,
+                redirected: response.redirected,
+                url: response.url
+            });
+            
             // Check if response is a redirect (status 302)
             if (response.redirected || response.status === 302) {
-                window.location.href = response.url;
+                console.log('🔄 Redirect detected, letting browser handle navigation to:', response.url);
+                // Let the browser handle the redirect naturally - no JavaScript navigation
                 return { success: true, redirect: true };
             }
             
+            console.log('📄 Parsing JSON response...');
             const data = await response.json();
+            console.log('📊 Parsed response data:', data);
             
             if (response.ok) {
-                if (data.processed === 0) {
-                    // Redirect to no emails found page
-                    window.location.href = '/no-emails-found';
-                    return { success: true, data: data, redirect: true };
-                }
-                return { success: true, data: data };
+                console.log('✅ Response OK - data.processed:', data.processed);
+                // This shouldn't happen with current backend since it redirects
+                console.log('⚠️ Unexpected JSON response - backend should have redirected');
+                return { success: false, error: 'Unexpected response format' };
             } else {
+                console.log('❌ Response not OK - error:', data.error);
                 return { success: false, error: data.error || 'An error occurred while processing emails' };
             }
         } catch (error) {
+            console.log('💥 Fetch error:', error);
             return { success: false, error: 'Network error: ' + error.message };
         }
     },
 
-    displayResults: function(data) {
-        const resultsDiv = document.getElementById('resultsContent');
-        
-        let html = `
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="bi bi-search"></i> Query Used</h6>
-                            <code>${data.query}</code>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="card bg-light">
-                        <div class="card-body">
-                            <h6 class="card-title"><i class="bi bi-check-circle"></i> Tasks Created</h6>
-                            <span class="badge bg-success fs-6">${data.processed}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        if (data.created && data.created.length > 0) {
-            html += '<h6><i class="bi bi-list-ul"></i> Created Tasks</h6>';
-            html += '<div class="table-responsive">';
-            html += '<table class="table table-striped">';
-            html += '<thead><tr><th>Subject</th><th>Provider</th><th>Status</th><th>Created</th></tr></thead>';
-            html += '<tbody>';
-            
-            data.created.forEach(task => {
-                const subject = task.task.content || task.task.subject || 'No subject';
-                const createdDate = task.task.created_at ? utils.formatDate(task.task.created_at) : 'Just now';
-                html += `
-                    <tr>
-                        <td>${subject}</td>
-                        <td><span class="badge bg-primary">${task.provider}</span></td>
-                        <td><span class="badge bg-success">Created</span></td>
-                        <td><small class="text-muted">${createdDate}</small></td>
-                    </tr>
-                `;
-            });
-            
-            html += '</tbody></table></div>';
-        } else {
-            html += '<div class="alert alert-info"><i class="bi bi-info-circle"></i> No new emails found to process.</div>';
-        }
-        
-        resultsDiv.innerHTML = html;
-        document.getElementById('results').style.display = 'block';
-    },
 
     displayError: function(message) {
-        document.getElementById('errorContent').textContent = message;
-        document.getElementById('error').style.display = 'block';
+        const errorContent = document.getElementById('errorContent');
+        const error = document.getElementById('error');
+        
+        if (errorContent) errorContent.textContent = message;
+        if (error) {
+            error.classList.remove('notion-hidden');
+            error.style.display = 'block';
+        }
     },
 
     showLoading: function() {
-        document.getElementById('loadingIndicator').style.display = 'block';
-        document.getElementById('results').style.display = 'none';
-        document.getElementById('error').style.display = 'none';
+        const error = document.getElementById('error');
+        const fetchBtn = document.getElementById('fetchBtn');
+        
+        if (error) {
+            error.classList.add('notion-hidden');
+            error.style.display = 'none';
+        }
+        if (fetchBtn) {
+            fetchBtn.disabled = true;
+        }
     },
 
     hideLoading: function() {
-        document.getElementById('loadingIndicator').style.display = 'none';
+        const fetchBtn = document.getElementById('fetchBtn');
+        if (fetchBtn) {
+            fetchBtn.disabled = false;
+        }
     }
 };
 
@@ -210,31 +188,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up form handlers
     const fetchForm = document.getElementById('fetchForm');
     if (fetchForm) {
-        fetchForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
+        fetchForm.addEventListener('submit', function(e) {
+            console.log('📋 Form submitted');
             
             const formData = utils.getFormData('fetchForm');
+            console.log('📝 Form data extracted:', formData);
             
             // Show loading state
+            console.log('⏳ Showing loading state');
             emailProcessor.showLoading();
-            document.getElementById('fetchBtn').disabled = true;
             
-            // Process emails
-            const result = await emailProcessor.fetch(formData);
-            
-            if (result.success) {
-                if (result.redirect) {
-                    // Already redirected, do nothing
-                    return;
-                }
-                emailProcessor.displayResults(result.data);
-            } else {
-                emailProcessor.displayError(result.error);
-            }
-            
-            // Hide loading state
-            emailProcessor.hideLoading();
-            document.getElementById('fetchBtn').disabled = false;
+            // Let the form submit naturally - browser will handle redirect
+            console.log('🔄 Form submitting naturally, browser will handle redirect');
+            // Don't prevent default - let the browser submit the form and handle the redirect
         });
     }
     

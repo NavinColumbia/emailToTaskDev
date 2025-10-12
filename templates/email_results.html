@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Email Processing Results - Taskflow{% endblock %}
+
+{% block content %}
+<div class="notion-slide-up">
+    <div class="notion-card">
+        <div class="notion-card-header">
+            <h1 class="notion-card-title">
+                <i class="bi bi-check-circle notion-icon" style="color: var(--notion-success);"></i>
+                Email Processing Complete
+            </h1>
+            <p class="notion-card-subtitle">Your emails have been successfully processed and sent to Todoist.</p>
+        </div>
+
+        {% if created_tasks %}
+        <div class="notion-card">
+            <div class="notion-card-header">
+                <h4 class="notion-card-title">
+                    <i class="bi bi-list-ul notion-icon"></i>
+                    Created Tasks
+                </h4>
+            </div>
+            <div class="notion-table-container">
+                <table class="notion-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Sender</th>
+                            <th>Provider</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in created_tasks %}
+                        <tr>
+                            <td>
+                                <div class="notion-text-truncate" style="max-width: 300px;" title="{{ task.task.content or task.task.subject or 'No subject' }}">
+                                    {{ task.task.content or task.task.subject or 'No subject' }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="notion-text-truncate" style="max-width: 200px;" title="{{ task.task.sender or 'Unknown' }}">
+                                    {{ task.task.sender or 'Unknown' }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="notion-badge notion-badge-primary">{{ task.provider }}</span>
+                            </td>
+                            <td>
+                                <span class="notion-badge notion-badge-success">
+                                    <i class="bi bi-check-circle notion-icon"></i>
+                                    Created
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+
+        <div class="notion-flex notion-gap-md notion-mt-lg">
+            <a href="{{ url_for('fetch_emails_page') }}" class="notion-btn notion-btn-primary">
+                <i class="bi bi-arrow-left notion-icon"></i>
+                Process More Emails
+            </a>
+            <a href="{{ url_for('index') }}" class="notion-btn notion-btn-secondary">
+                <i class="bi bi-house notion-icon"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add some interactive features
+document.addEventListener('DOMContentLoaded', function() {
+    // Add animation to the success badge
+    const successBadge = document.querySelector('.notion-badge-success');
+    if (successBadge) {
+        successBadge.style.animation = 'pulse 2s infinite';
+    }
+    
+    // Add hover effects to table rows
+    const tableRows = document.querySelectorAll('.notion-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'var(--notion-bg-hover)';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+});
+
+// Add CSS for pulse animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

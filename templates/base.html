@@ -16,8 +16,11 @@
                 </a>
                 <div class="notion-nav-links">
                     {% if session.credentials %}
-                        <a class="notion-nav-link" href="{{ url_for('fetch_emails') }}">
+                        <a class="notion-nav-link" href="{{ url_for('fetch_emails_page') }}">
                             <i class="bi bi-download notion-icon"></i> Fetch Emails
+                        </a>
+                        <a class="notion-nav-link" href="{{ url_for('view_all_results') }}">
+                            <i class="bi bi-list-check notion-icon"></i> All Results
                         </a>
                         <a class="notion-nav-link" href="#" onclick="showSetupGuide(); return false;">
                             <i class="bi bi-question-circle notion-icon"></i> Setup Guide

@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}All Processed Tasks - Taskflow{% endblock %}
+
+{% block content %}
+<div class="notion-slide-up">
+    <div class="notion-card">
+        <div class="notion-card-header">
+            <h1 class="notion-card-title">
+                <i class="bi bi-list-check notion-icon" style="color: var(--notion-accent);"></i>
+                All Processed Tasks
+            </h1>
+            <p class="notion-card-subtitle">View all emails that have been processed and sent to Todoist.</p>
+        </div>
+        
+        {% if tasks_history %}
+        <div class="notion-card">
+            <div class="notion-card-header">
+                <h4 class="notion-card-title">
+                    <i class="bi bi-list-ul notion-icon"></i>
+                    Task History
+                </h4>
+            </div>
+            <div class="notion-table-container">
+                <table class="notion-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th>Sender</th>
+                            <th>Provider</th>
+                            <th>Query Used</th>
+                            <th>Processed</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task_entry in tasks_history %}
+                        <tr>
+                            <td>
+                                <div class="notion-text-truncate" style="max-width: 300px;" title="{{ task_entry.task.content or task_entry.task.subject or 'No subject' }}">
+                                    {{ task_entry.task.content or task_entry.task.subject or 'No subject' }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="notion-text-truncate" style="max-width: 200px;" title="{{ task_entry.task.sender or 'Unknown' }}">
+                                    {{ task_entry.task.sender or 'Unknown' }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="notion-badge notion-badge-primary">{{ task_entry.provider }}</span>
+                            </td>
+                            <td>
+                                <div class="notion-text-truncate" style="max-width: 150px;" title="{{ task_entry.query }}">
+                                    {{ task_entry.query }}
+                                </div>
+                            </td>
+                            <td>
+                                <div class="notion-text-mono notion-text-small">
+                                    {{ task_entry.created_at[:19].replace('T', ' ') }}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="notion-badge notion-badge-success">
+                                    <i class="bi bi-check-circle notion-icon"></i>
+                                    Created
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% else %}
+        <div class="notion-card">
+            <div class="notion-card-header">
+                <h4 class="notion-card-title">
+                    <i class="bi bi-inbox notion-icon"></i>
+                    No Tasks Found
+                </h4>
+            </div>
+            <p>No tasks have been processed yet. Start by fetching and processing emails from your Gmail account.</p>
+        </div>
+        {% endif %}
+
+        <div class="notion-flex notion-gap-md notion-mt-lg">
+            <a href="{{ url_for('fetch_emails_page') }}" class="notion-btn notion-btn-primary">
+                <i class="bi bi-download notion-icon"></i>
+                Process More Emails
+            </a>
+            <a href="{{ url_for('index') }}" class="notion-btn notion-btn-secondary">
+                <i class="bi bi-house notion-icon"></i>
+                Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Add some interactive features
+document.addEventListener('DOMContentLoaded', function() {
+    // Add hover effects to table rows
+    const tableRows = document.querySelectorAll('.notion-table tbody tr');
+    tableRows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = 'var(--notion-bg-hover)';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+    
+    // Add animation to success badges
+    const successBadges = document.querySelectorAll('.notion-badge-success');
+    successBadges.forEach(badge => {
+        badge.style.animation = 'pulse 2s infinite';
+    });
+});
+
+// Add CSS for pulse animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+        100% { transform: scale(1); }
+    }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

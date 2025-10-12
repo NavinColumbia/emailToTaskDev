@@ -97,39 +97,16 @@ function performSearch(query, window, max) {
     
     fetch(`/api/fetch-emails?${params}`, {
         method: 'POST',
-        headers: {
-            'Accept': 'application/json'
-        }
+        // no custom Accept header -> browser default includes text/html
+        redirect: 'follow'
     })
     .then(response => {
-        if (response.redirected || response.status === 302) {
-            try {
-                window.location.href = response.url;
-            } catch (e) {
-                document.location.href = response.url;
-            }
+        if (response.redirected) {
+            location.href = response.url; // server-> /email-results
             return;
         }
-        return response.json();
-    })
-    .then(data => {        
-        if (data && data.processed > 0) {
-            // Redirect to results page - flash message will be handled server-side
-            try {
-                window.location.href = '/fetch-emails';
-            } catch (e) {
-                document.location.href = '/fetch-emails';
-            }
-        } else {
-            // Still no results, redirect back to no-emails-found with flash message
-            setTimeout(() => {
-                try {
-                    window.location.href = '/no-emails-found?message=no_results';
-                } catch (e) {
-                    document.location.href = '/no-emails-found?message=no_results';
-                }
-            }, 100);
-        }
+        // fallback if some proxy strips redirects:
+        location.href = '/email-results';
     })
     .catch(error => {
         // Redirect to no-emails-found with error message
