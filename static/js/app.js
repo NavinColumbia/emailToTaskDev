@@ -2,25 +2,20 @@
 
 // Utility functions
 const utils = {
-    // Show alert messages
+
     showAlert: function(message, type = 'info', duration = 5000) {
         const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+        alertDiv.className = `notion-alert notion-alert-${type} notion-fade-in`;
         alertDiv.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <i class="bi bi-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-triangle' : 'info-circle'} notion-icon"></i>
+            <span>${message}</span>
         `;
-        
-        const container = document.querySelector('main.container');
-        container.insertBefore(alertDiv, container.firstChild);
-        
-        // Auto-dismiss after specified duration
-        setTimeout(() => {
-            const alert = bootstrap.Alert.getOrCreateInstance(alertDiv);
-            alert.close();
-        }, duration);
-    },
-
+    
+        const container = document.querySelector('.notion-container') || document.body;
+        container.prepend(alertDiv);
+    
+        setTimeout(() => { alertDiv.remove(); }, duration);
+    },    
     // Save settings to localStorage
     saveSettings: function(settings) {
         localStorage.setItem('emailToTaskSettings', JSON.stringify(settings));

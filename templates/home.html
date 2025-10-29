@@ -94,16 +94,19 @@
                 <div class="notion-form-group">
                     <label for="provider" class="notion-label">Task Provider</label>
                     <select class="notion-select" id="provider" name="provider">
-                        <option value="todoist" selected>Todoist</option>
+                        <option value="google_tasks" selected>Google Tasks</option>
                     </select>
+                    
                 </div>
+                <!--
                 <div class="notion-form-group">
                     <label for="label" class="notion-label">Gmail Label</label>
                     <input type="text" class="notion-input" id="label" name="label" value="todoist-forward" placeholder="Gmail label to process">
-                </div>
+                </div> -->
                 <div class="notion-form-group">
-                    <label for="max" class="notion-label">Max Emails to Process</label>
-                    <input type="number" class="notion-input" id="max" name="max" value="10" min="1" max="100">
+                    <label for="max" class="notion-label">Max Emails</label>
+<input type="number" class="notion-input" id="max" name="max" min="1" placeholder="(blank = all)">
+
                 </div>
                 <div class="notion-form-group">
                     <label for="window" class="notion-label">Time Window</label>

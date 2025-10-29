@@ -1,3 +1,4 @@
 """Task provider integrations."""
 
-__all__ = ["todoist"]
+__all__ = ["google_tasks"]
+

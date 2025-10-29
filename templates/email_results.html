@@ -10,7 +10,7 @@
                 <i class="bi bi-check-circle notion-icon" style="color: var(--notion-success);"></i>
                 Email Processing Complete
             </h1>
-            <p class="notion-card-subtitle">Your emails have been successfully processed and sent to Todoist.</p>
+            <p class="notion-card-subtitle">Your emails have been successfully processed and added to Google Tasks.</p>
         </div>
 
         {% if created_tasks %}
@@ -24,39 +24,42 @@
             <div class="notion-table-container">
                 <table class="notion-table">
                     <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Sender</th>
-                            <th>Provider</th>
-                            <th>Status</th>
-                        </tr>
+                      <tr>
+                        <th>Title</th>
+                        <th>Provider</th>
+                        <th>Status</th>
+                        <th>Open</th>
+                      </tr>
                     </thead>
                     <tbody>
-                        {% for task in created_tasks %}
+                      {% for item in created_tasks %}
+                        {% set t = item.task %}
                         <tr>
-                            <td>
-                                <div class="notion-text-truncate" style="max-width: 300px;" title="{{ task.task.content or task.task.subject or 'No subject' }}">
-                                    {{ task.task.content or task.task.subject or 'No subject' }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="notion-text-truncate" style="max-width: 200px;" title="{{ task.task.sender or 'Unknown' }}">
-                                    {{ task.task.sender or 'Unknown' }}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="notion-badge notion-badge-primary">{{ task.provider }}</span>
-                            </td>
-                            <td>
-                                <span class="notion-badge notion-badge-success">
-                                    <i class="bi bi-check-circle notion-icon"></i>
-                                    Created
-                                </span>
-                            </td>
+                          <td>
+                            <div class="notion-text-truncate" style="max-width: 420px;" title="{{ t.title or '(no title)' }}">
+                              {{ t.title or '(no title)' }}
+                            </div>
+                          </td>
+                          <td>
+                            <span class="notion-badge notion-badge-primary">{{ item.provider }}</span>
+                          </td>
+                          <td>
+                            <span class="notion-badge notion-badge-success">
+                              <i class="bi bi-check-circle notion-icon"></i>
+                              Created
+                              {% if t.due %}<span class="notion-text-mono notion-text-small">&nbsp;· due {{ t.due }}</span>{% endif %}
+                            </span>
+                          </td>
+                          <td>
+                            <a class="notion-btn notion-btn-sm" href="https://tasks.google.com/" target="_blank" rel="noopener">
+                              <i class="bi bi-box-arrow-up-right notion-icon"></i> Open Google Tasks
+                            </a>
+                          </td>
+                          
                         </tr>
-                        {% endfor %}
+                      {% endfor %}
                     </tbody>
-                </table>
+                  </table>                  
             </div>
         </div>
         {% endif %}

@@ -10,7 +10,7 @@
                 <i class="bi bi-list-check notion-icon" style="color: var(--notion-accent);"></i>
                 All Processed Tasks
             </h1>
-            <p class="notion-card-subtitle">View all emails that have been processed and sent to Todoist.</p>
+            <p class="notion-card-subtitle">View all emails that have been processed and added to Google Tasks.</p>
         </div>
         
         {% if tasks_history %}
@@ -24,51 +24,48 @@
             <div class="notion-table-container">
                 <table class="notion-table">
                     <thead>
-                        <tr>
-                            <th>Subject</th>
-                            <th>Sender</th>
-                            <th>Provider</th>
-                            <th>Query Used</th>
-                            <th>Processed</th>
-                            <th>Status</th>
-                        </tr>
+                      <tr>
+                        <th>Task Title</th>
+                        <th>Sender</th>
+                        <th>Provider</th>
+                        <th>Received</th>
+                        <th>Processed</th>
+                        <th>Due</th>
+                        <th>Open</th>
+                      </tr>
                     </thead>
                     <tbody>
-                        {% for task_entry in tasks_history %}
-                        <tr>
-                            <td>
-                                <div class="notion-text-truncate" style="max-width: 300px;" title="{{ task_entry.task.content or task_entry.task.subject or 'No subject' }}">
-                                    {{ task_entry.task.content or task_entry.task.subject or 'No subject' }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="notion-text-truncate" style="max-width: 200px;" title="{{ task_entry.task.sender or 'Unknown' }}">
-                                    {{ task_entry.task.sender or 'Unknown' }}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="notion-badge notion-badge-primary">{{ task_entry.provider }}</span>
-                            </td>
-                            <td>
-                                <div class="notion-text-truncate" style="max-width: 150px;" title="{{ task_entry.query }}">
-                                    {{ task_entry.query }}
-                                </div>
-                            </td>
-                            <td>
-                                <div class="notion-text-mono notion-text-small">
-                                    {{ task_entry.created_at[:19].replace('T', ' ') }}
-                                </div>
-                            </td>
-                            <td>
-                                <span class="notion-badge notion-badge-success">
-                                    <i class="bi bi-check-circle notion-icon"></i>
-                                    Created
-                                </span>
-                            </td>
-                        </tr>
-                        {% endfor %}
+                      {% for r in tasks_history %}
+                      <tr>
+                        <td>
+                          <div class="notion-text-truncate" style="max-width: 320px;" title="{{ r.task_title or r.email_subject or 'No title' }}">
+                            {{ r.task_title or r.email_subject or 'No title' }}
+                          </div>
+                        </td>
+                        <td>
+                          <div class="notion-text-truncate" style="max-width: 220px;" title="{{ r.email_sender or 'Unknown' }}">
+                            {{ r.email_sender or 'Unknown' }}
+                          </div>
+                        </td>
+                        <td><span class="notion-badge notion-badge-primary">{{ r.provider }}</span></td>
+                        <td class="notion-text-mono notion-text-small">
+                          {{ (r.email_received_at or '')[:19].replace('T', ' ') }}
+                        </td>
+                        <td class="notion-text-mono notion-text-small">
+                          {{ (r.created_at or '')[:19].replace('T', ' ') }}
+                        </td>
+                        <td>{{ r.task_due or '—' }}</td>
+                        <td>
+                            <a class="notion-btn notion-btn-sm" href="https://tasks.google.com/" target="_blank" rel="noopener">
+                              <i class="bi bi-box-arrow-up-right notion-icon"></i> Open Google Tasks
+                            </a>
+                          </td>                          
+                      </tr>
+                      {% endfor %}
                     </tbody>
-                </table>
+                  </table>
+                  
+                
             </div>
         </div>
         {% else %}

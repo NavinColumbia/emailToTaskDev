@@ -20,6 +20,7 @@
                     </h3>
                 </div>
                 <div>
+                    <!--
                     <h4>Create Gmail Label</h4>
                     <ol class="notion-mb-md">
                         <li>Go to Gmail Settings</li>
@@ -33,6 +34,7 @@
                         <li>Apply "todoist-forward" label</li>
                         <li>Forward emails to yourself</li>
                     </ol>
+                -->
                     
                 </div>
             </div>
@@ -84,7 +86,7 @@ function performSearch(query, window, max) {
     
     // Perform the search with proper parameters
     const params = new URLSearchParams({
-        provider: 'todoist',
+        provider: 'google_tasks',
         label: '', // Clear the label to search inbox/unread instead
         window: window,
         max: max
