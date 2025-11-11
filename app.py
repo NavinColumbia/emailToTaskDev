@@ -3,7 +3,7 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Tuple
-
+from dateutil import parser as date_parser
 from flask import Flask, request, redirect, session, url_for, jsonify, render_template, flash
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -303,18 +303,68 @@ def dispatch_task(provider: str, payload: dict) -> dict:
     raise ValueError(f"Unsupported provider '{provider}'")
 
 def create_google_calendar_event(meeting: dict):
+    """
+    Create a Google Calendar event for a meeting.
+    Automatically uses start/end times from the meeting dict, or
+    attempts to infer them from the email body or summary.
+    """
     service = get_calendar_service()
     if not service:
         print("Not authenticated for Google Calendar")
         return None
 
+    now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+    raw_start = meeting.get("start_datetime")
+    raw_end = meeting.get("end_datetime")
+    start_obj = None
+
+    # Try to parse start_datetime if provided
+    if raw_start:
+        try:
+            start_obj = date_parser.isoparse(raw_start)
+        except Exception:
+            start_obj = None
+
+    # If missing, try to infer from summary + notes/body
+    if not start_obj:
+        from ml import extract_meeting_datetime
+        start_dt, end_dt = extract_meeting_datetime(
+            (meeting.get("summary") or "") + "\n" + (meeting.get("notes") or "")
+        )
+        if start_dt:
+            start_obj = date_parser.isoparse(start_dt)
+            if not raw_end:
+                raw_end = end_dt
+
+    # Default to now if parsing fails or datetime is in the past
+    if not start_obj or start_obj < now_utc:
+        start_obj = now_utc
+
+    # Parse end_datetime or set default duration
+    if raw_end:
+        try:
+            end_obj = date_parser.isoparse(raw_end)
+        except Exception:
+            end_obj = start_obj + timedelta(hours=1)
+    else:
+        end_obj = start_obj + timedelta(hours=1)
+
+    if end_obj <= start_obj:
+        end_obj = start_obj + timedelta(hours=1)
+
+    # Convert to RFC3339 ISO strings
+    start_dt_iso = start_obj.isoformat()
+    end_dt_iso = end_obj.isoformat()
+
+    # Build the event payload
     event = {
         "summary": meeting.get("summary") or "Meeting",
         "location": meeting.get("location"),
-        "description": meeting.get("summary"),
-        "start": {"dateTime": meeting.get("start_datetime"), "timeZone": "UTC"},
-        "end": {"dateTime": meeting.get("end_datetime"), "timeZone": "UTC"},
-        "attendees": [{"email": p} for p in meeting.get("participants", [])],
+        "description": meeting.get("notes") or meeting.get("summary"),
+        "start": {"dateTime": start_dt_iso, "timeZone": "UTC"},
+        "end": {"dateTime": end_dt_iso, "timeZone": "UTC"},
+        "attendees": [{"email": p} for p in meeting.get("participants", []) if p],
     }
 
     try:
@@ -324,6 +374,7 @@ def create_google_calendar_event(meeting: dict):
     except Exception as e:
         print(f"Error creating Google Calendar event: {e}")
         return None
+
 
 
 @app.route("/")

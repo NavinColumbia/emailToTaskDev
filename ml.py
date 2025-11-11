@@ -13,6 +13,9 @@ import json
 import re
 from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
+from datetime import timezone, timedelta
+from dateutil import parser as date_parser
+
 
 try:
     from openai import OpenAI
@@ -212,6 +215,7 @@ For task notes:
 """
 
 
+    result: Dict[str, Any] = {}
     try:
         client = OpenAI(api_key=api_key)
         
@@ -237,11 +241,15 @@ For task notes:
         
         # Validate meeting field
         meeting_info = result.get("meeting")
-        if meeting_info:
-            required_keys = ["is_meeting", "summary", "start_datetime", "end_datetime"]
-            if not all(k in meeting_info for k in required_keys):
-                result["meeting"] = None
+        if meeting_info and meeting_info.get("is_meeting"):
+            # If start_datetime is missing, attempt to extract it from the email body
+            if not meeting_info.get("start_datetime"):
+                start_dt, end_dt = extract_meeting_datetime(payload.get("body") or "")
+                if start_dt:
+                    meeting_info["start_datetime"] = start_dt
+                    meeting_info["end_datetime"] = end_dt
 
+      
         # Validate and sanitize response
         return {
             "should_create": bool(result.get("should_create", True)),
@@ -271,7 +279,7 @@ For task notes:
             "title": email_content["subject"],
             "notes": email_content["body"] or email_content["snippet"],
             "reasoning": f"API error: {str(e)}",
-            "meeting": result.get("meeting") 
+            "meeting": result.get("meeting") if isinstance(result, dict) else None
         }
 
 
@@ -317,3 +325,22 @@ def ml_decide(payload: Dict[str, Any]) -> Dict[str, Any]:
             result["meeting"] = None
     return result
 
+def extract_meeting_datetime(text: str):
+    """
+    Tries to extract a date/time from email content to schedule a meeting.
+    Returns a tuple (start_datetime_iso, end_datetime_iso) in UTC.
+    
+    - text: email body or summary
+    - returns: tuple of RFC3339 ISO strings (start, end), or (None, None)
+    """
+    if not text:
+        return None, None
+
+    try:
+        
+        dt = date_parser.parse(text, fuzzy=True)
+        start_dt = dt.astimezone(timezone.utc)
+        end_dt = start_dt + timedelta(hours=1)  # default 1-hour duration
+        return start_dt.isoformat(), end_dt.isoformat()
+    except Exception:
+        return None, None
