@@ -3,6 +3,8 @@ ML module for email classification and task generation.
 Uses OpenAI API to:
 1. Classify whether an email should become a task
 2. Generate appropriate task title and body from email content
+3. Detect whether an email should lead to a meeting
+4. Generate appropriate meeting details from email
 """
 
 from __future__ import annotations
@@ -11,6 +13,9 @@ import json
 import re
 from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
+from datetime import timezone, timedelta
+from dateutil import parser as date_parser
+
 
 try:
     from openai import OpenAI
@@ -89,7 +94,7 @@ def classify_and_generate_task(
     model: str = "gpt-4o-mini"
 ) -> Dict[str, Any]:
     """
-    Main function to classify email and generate task details.
+    Main function to classify email and generate task details and meetings.
     
     Args:
         payload: Email payload containing subject, body, html, snippet, sender
@@ -103,6 +108,7 @@ def classify_and_generate_task(
         - title: str - generated task title
         - notes: str - generated task description/body
         - reasoning: str - explanation of classification decision
+        - meeting: dictoniary indicating if it should create a meeting, location, start and end time and participants.
     """
     if not OPENAI_AVAILABLE:
         # Fallback: create task with original content
@@ -129,11 +135,30 @@ def classify_and_generate_task(
     sender = payload.get("sender", "Unknown")
     
     # Build prompt for classification and generation
-    prompt = f"""You are an intelligent email assistant that helps users manage their tasks by analyzing emails.
+    prompt = f"""
+You are an intelligent email assistant that helps users manage their tasks and meetings by analyzing emails.
 
-Given the following email, determine:
-1. Whether this email represents a task or action item that should be added to a task list
-2. If yes, generate a concise task title and detailed task notes
+Instructions:
+
+1. Determine if the email represents:
+   a) a task to be created
+   b) a meeting invitation
+
+2. If it's a task:
+   - Generate a concise task title (3-8 words)
+   - Generate detailed task notes (2-4 sentences)
+   - Provide a confidence score (0.0-1.0)
+   - Explain your reasoning
+
+3. If it's a meeting:
+   - Detect if it is indeed a meeting (is_meeting: true/false)
+   - Extract meeting details:
+       * summary: meeting title
+       * location: physical or virtual link (leave empty if unknown)
+       * start_datetime: RFC3339 UTC start time (leave empty if unknown)
+       * end_datetime: RFC3339 UTC end time (leave empty if unknown)
+       * participants: list of email addresses (leave empty list if unknown)
+   - Use context clues like "meeting", "invite", "agenda", "call", "Zoom", "conference", "link"
 
 Email Details:
 From: {sender}
@@ -167,7 +192,15 @@ Respond ONLY with valid JSON in this exact format:
   "confidence": 0.0-1.0,
   "title": "Concise task title (3-8 words)",
   "notes": "Detailed task description with key information",
-  "reasoning": "Brief explanation of decision"
+  "reasoning": "Brief explanation of decision",
+  "meeting": {{
+      "is_meeting": true/false,
+      "summary": "",
+      "location": "",
+      "start_datetime": "",
+      "end_datetime": "",
+      "participants": []
+  }}
 }}
 
 For task title:
@@ -181,6 +214,8 @@ For task notes:
 - Extract actionable information from the email body
 """
 
+
+    result: Dict[str, Any] = {}
     try:
         client = OpenAI(api_key=api_key)
         
@@ -204,13 +239,25 @@ For task notes:
         result_text = response.choices[0].message.content
         result = json.loads(result_text)
         
+        # Validate meeting field
+        meeting_info = result.get("meeting")
+        if meeting_info and meeting_info.get("is_meeting"):
+            # If start_datetime is missing, attempt to extract it from the email body
+            if not meeting_info.get("start_datetime"):
+                start_dt, end_dt = extract_meeting_datetime(payload.get("body") or "")
+                if start_dt:
+                    meeting_info["start_datetime"] = start_dt
+                    meeting_info["end_datetime"] = end_dt
+
+      
         # Validate and sanitize response
         return {
             "should_create": bool(result.get("should_create", True)),
             "confidence": float(result.get("confidence", 0.5)),
             "title": str(result.get("title", email_content["subject"]))[:200],  # Limit length
             "notes": str(result.get("notes", email_content["body"] or email_content["snippet"]))[:2000],
-            "reasoning": str(result.get("reasoning", ""))[:500]
+            "reasoning": str(result.get("reasoning", ""))[:500],
+            "meeting": result.get("meeting")
         }
         
     except json.JSONDecodeError as e:
@@ -231,7 +278,8 @@ For task notes:
             "confidence": 0.5,
             "title": email_content["subject"],
             "notes": email_content["body"] or email_content["snippet"],
-            "reasoning": f"API error: {str(e)}"
+            "reasoning": f"API error: {str(e)}",
+            "meeting": result.get("meeting") if isinstance(result, dict) else None
         }
 
 
@@ -268,5 +316,11 @@ def ml_decide(payload: Dict[str, Any]) -> Dict[str, Any]:
     api_key = os.getenv("OPENAI_API_KEY")
     model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
     
-    return classify_and_generate_task(payload, api_key=api_key, model=model)
-
+    result = classify_and_generate_task(payload, api_key=api_key, model=model)
+    
+    meeting_info = result.get("meeting")
+    if meeting_info:
+        required_keys = ["is_meeting", "summary", "start_datetime", "end_datetime"]
+        if not all(k in meeting_info for k in required_keys):
+            result["meeting"] = None
+    return result

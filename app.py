@@ -3,7 +3,7 @@ import os
 import base64
 from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, Tuple
-
+from dateutil import parser as date_parser
 from flask import Flask, request, redirect, session, url_for, jsonify, render_template, flash
 from google_auth_oauthlib.flow import Flow
 from google.oauth2.credentials import Credentials
@@ -37,6 +37,7 @@ CLIENT_SECRETS_FILE = os.getenv("GOOGLE_CLIENT_SECRETS", "client_secret.json")
 SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
     "https://www.googleapis.com/auth/tasks",
+    "https://www.googleapis.com/auth/calendar.events",
 ]
 
 REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://127.0.0.1:5000/oauth2callback")
@@ -72,6 +73,11 @@ def get_tasks_service():
         return None
     return build("tasks", "v1", credentials=creds)
 
+def get_calendar_service():
+    creds = _get_credentials()
+    if not creds:
+        return None
+    return build("calendar", "v3", credentials=creds)
 
 
 
@@ -296,6 +302,67 @@ def dispatch_task(provider: str, payload: dict) -> dict:
 
     raise ValueError(f"Unsupported provider '{provider}'")
 
+def create_google_calendar_event(meeting: dict):
+    """
+    Create a Google Calendar event for a meeting.
+    Automatically uses start/end times from the meeting dict, or
+    attempts to infer them from the email body or summary.
+    """
+    service = get_calendar_service()
+    if not service:
+        print("Not authenticated for Google Calendar")
+        return None
+
+    raw_start = meeting.get("start_datetime")
+    raw_end = meeting.get("end_datetime")
+    now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
+
+    # Parse supplied start time or fall back to now
+    if raw_start:
+        try:
+            start_obj = dateutil_parser.isoparse(raw_start)
+        except Exception:
+            start_obj = now_utc
+    else:
+        start_obj = now_utc
+
+    # Never schedule meetings in the past
+    if start_obj < now_utc:
+        start_obj = now_utc
+
+    start_dt = start_obj.isoformat()
+
+    # Parse end time or default to one hour after start
+    if raw_end:
+        try:
+            end_obj = dateutil_parser.isoparse(raw_end)
+        except Exception:
+            end_obj = start_obj + timedelta(hours=1)
+    else:
+        end_obj = start_obj + timedelta(hours=1)
+
+    if end_obj <= start_obj:
+        end_obj = start_obj + timedelta(hours=1)
+
+    end_dt = end_obj.isoformat()
+
+    event = {
+        "summary": meeting.get("summary") or "Meeting",
+        "location": meeting.get("location"),
+        "description": meeting.get("summary"),
+        "start": {"dateTime": start_dt, "timeZone": "UTC"},
+        "end": {"dateTime": end_dt, "timeZone": "UTC"},
+        "attendees": [{"email": p} for p in meeting.get("participants", []) if p],
+    }
+
+    try:
+        created_event = service.events().insert(calendarId="primary", body=event).execute()
+        print(f"Created Google Calendar event: {created_event.get('htmlLink')}")
+        return created_event
+    except Exception as e:
+        print(f"Error creating Google Calendar event: {e}")
+        return None
+
 
 
 @app.route("/")
@@ -471,6 +538,11 @@ def fetch_emails():
             should_create = ml_result.get("should_create", True)
             confidence = ml_result.get("confidence", 0.5)
             reasoning = ml_result.get("reasoning", "")
+
+            #create meeting if necessary
+            meeting_info = ml_result.get("meeting")
+            if meeting_info and meeting_info.get("is_meeting"):
+                create_google_calendar_event(meeting_info)
             
             # Store email with ML metadata
             email_row = get_or_create_email(s, message_id, payload)
