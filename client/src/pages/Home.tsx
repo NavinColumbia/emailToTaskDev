@@ -162,8 +162,8 @@ export default function Home({ authenticated }: HomeProps) {
     return <LandingPage />;
   }
 
-  return (
-    <>
+    return (
+      <>
       <Box sx={{ maxWidth: 900, mx: 'auto', px: 3, pt: 4 }}>
         <Box sx={{ mb: 4 }}>
           <PageHeader onSettingsClick={() => setShowSettings(true)} />
@@ -176,7 +176,7 @@ export default function Home({ authenticated }: HomeProps) {
               <Tab label="Process Emails" icon={<DownloadIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
               <Tab label="All Tasks" icon={<ListIcon sx={{ fontSize: 18 }} />} iconPosition="start" />
             </Tabs>
-          </Box>
+            </Box>
 
           <TabPanel value={tabValue} index={0}>
             <ProcessEmailsForm
@@ -196,8 +196,8 @@ export default function Home({ authenticated }: HomeProps) {
               onRefresh={loadAllTasks}
             />
           </TabPanel>
-        </Box>
-      </Box>
+              </Box>
+            </Box>
 
       <SettingsDialog
         open={showSettings}
@@ -207,16 +207,16 @@ export default function Home({ authenticated }: HomeProps) {
         onSave={saveSettings}
       />
 
-      <Snackbar
-        open={showSnackbar}
+        <Snackbar
+          open={showSnackbar}
         autoHideDuration={6000}
-        onClose={() => setShowSnackbar(false)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
+          onClose={() => setShowSnackbar(false)}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
         <Alert onClose={() => setShowSnackbar(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
           {snackbarMessage}
-        </Alert>
-      </Snackbar>
-    </>
-  );
-}
+          </Alert>
+        </Snackbar>
+      </>
+    );
+  }

@@ -247,13 +247,13 @@ def gmail_list_ids(service, q: str, max_list: int | None = 50, min_internal_ms: 
     while True:
         page_num += 1
         try:
-            resp = (
-                service.users()
-                .messages()
-                .list(userId="me", q=q, maxResults=page_size, pageToken=page_token)
-                .execute()
-            )
-            messages = resp.get("messages", [])
+        resp = (
+            service.users()
+            .messages()
+            .list(userId="me", q=q, maxResults=page_size, pageToken=page_token)
+            .execute()
+        )
+        messages = resp.get("messages", [])
             logger.debug(f"Gmail API page {page_num}: received {len(messages)} messages")
         except Exception as e:
             logger.error(f"Error fetching Gmail messages (page {page_num}): {e}", exc_info=True)
@@ -384,19 +384,19 @@ npm run build
 def authorize():
     logger.info("OAuth authorization initiated")
     try:
-        flow = Flow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
-            scopes=SCOPES,
-            redirect_uri=REDIRECT_URI,
-        )
-        authorization_url, state = flow.authorization_url(
-            access_type="offline",
-            include_granted_scopes="true",
-            prompt="consent",
-        )
-        session["state"] = state
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI,
+    )
+    authorization_url, state = flow.authorization_url(
+        access_type="offline",
+        include_granted_scopes="true",
+        prompt="consent",
+    )
+    session["state"] = state
         logger.info(f"OAuth flow started, redirecting to authorization URL")
-        return redirect(authorization_url)
+    return redirect(authorization_url)
     except Exception as e:
         logger.error(f"Error initiating OAuth flow: {e}", exc_info=True)
         raise
@@ -405,25 +405,25 @@ def authorize():
 def oauth2callback():
     logger.info("OAuth callback received")
     try:
-        state = session.get("state")
-        flow = Flow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
-            scopes=SCOPES,
-            state=state,
-            redirect_uri=REDIRECT_URI,
-        )
-        flow.fetch_token(authorization_response=request.url)
-        credentials = flow.credentials
-        session["credentials"] = {
-            "token": credentials.token,
-            "refresh_token": credentials.refresh_token,
-            "token_uri": credentials.token_uri,
-            "client_id": credentials.client_id,
-            "client_secret": credentials.client_secret,
-            "scopes": credentials.scopes,
-        }
+    state = session.get("state")
+    flow = Flow.from_client_secrets_file(
+        CLIENT_SECRETS_FILE,
+        scopes=SCOPES,
+        state=state,
+        redirect_uri=REDIRECT_URI,
+    )
+    flow.fetch_token(authorization_response=request.url)
+    credentials = flow.credentials
+    session["credentials"] = {
+        "token": credentials.token,
+        "refresh_token": credentials.refresh_token,
+        "token_uri": credentials.token_uri,
+        "client_id": credentials.client_id,
+        "client_secret": credentials.client_secret,
+        "scopes": credentials.scopes,
+    }
         logger.info("OAuth authentication successful, credentials stored in session")
-        return redirect("/")
+    return redirect("/")
     except Exception as e:
         logger.error(f"Error in OAuth callback: {e}", exc_info=True)
         raise
@@ -444,30 +444,30 @@ def api_all_results():
         return jsonify({"error": "Not authenticated"}), 401
 
     try:
-        with db_session() as s:
-            rows = (
-                s.query(Task, Email)
-                .join(Email, Email.id == Task.email_id)
-                .order_by(Task.created_at.desc())
-                .limit(200)
-                .all()
-            )
-            items = []
-            for t, e in rows:
-                md = t.provider_metadata or {}
-                items.append({
-                    "provider": t.provider,
-                    "provider_task_id": t.provider_task_id,
-                    "created_at": t.created_at.isoformat() if t.created_at else "",
-                    "email_subject": e.subject,
-                    "email_sender": e.sender,
-                    "email_received_at": e.received_at.isoformat() if e.received_at else "",
-                    "task_title": md.get("title"),
-                    "task_link": md.get("selfLink"),
-                    "task_due": md.get("due"),
-                })
+    with db_session() as s:
+        rows = (
+            s.query(Task, Email)
+            .join(Email, Email.id == Task.email_id)
+            .order_by(Task.created_at.desc())
+            .limit(200)
+            .all()
+        )
+        items = []
+        for t, e in rows:
+            md = t.provider_metadata or {}
+            items.append({
+                "provider": t.provider,
+                "provider_task_id": t.provider_task_id,
+                "created_at": t.created_at.isoformat() if t.created_at else "",
+                "email_subject": e.subject,
+                "email_sender": e.sender,
+                "email_received_at": e.received_at.isoformat() if e.received_at else "",
+                "task_title": md.get("title"),
+                "task_link": md.get("selfLink"),
+                "task_due": md.get("due"),
+            })
         logger.info(f"Retrieved {len(items)} tasks from database")
-        return jsonify({"tasks": items, "total": len(items)})
+    return jsonify({"tasks": items, "total": len(items)})
     except Exception as e:
         logger.error(f"Error fetching all tasks: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch tasks"}), 500
