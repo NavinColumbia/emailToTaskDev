@@ -324,23 +324,3 @@ def ml_decide(payload: Dict[str, Any]) -> Dict[str, Any]:
         if not all(k in meeting_info for k in required_keys):
             result["meeting"] = None
     return result
-
-def extract_meeting_datetime(text: str):
-    """
-    Tries to extract a date/time from email content to schedule a meeting.
-    Returns a tuple (start_datetime_iso, end_datetime_iso) in UTC.
-    
-    - text: email body or summary
-    - returns: tuple of RFC3339 ISO strings (start, end), or (None, None)
-    """
-    if not text:
-        return None, None
-
-    try:
-        
-        dt = date_parser.parse(text, fuzzy=True)
-        start_dt = dt.astimezone(timezone.utc)
-        end_dt = start_dt + timedelta(hours=1)  # default 1-hour duration
-        return start_dt.isoformat(), end_dt.isoformat()
-    except Exception:
-        return None, None

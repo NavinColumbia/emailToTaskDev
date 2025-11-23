@@ -313,38 +313,29 @@ def create_google_calendar_event(meeting: dict):
         print("Not authenticated for Google Calendar")
         return None
 
-    now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
-
     raw_start = meeting.get("start_datetime")
     raw_end = meeting.get("end_datetime")
-    start_obj = None
+    now_utc = datetime.now(timezone.utc).replace(second=0, microsecond=0)
 
-    # Try to parse start_datetime if provided
+    # Parse supplied start time or fall back to now
     if raw_start:
         try:
-            start_obj = date_parser.isoparse(raw_start)
+            start_obj = dateutil_parser.isoparse(raw_start)
         except Exception:
-            start_obj = None
-
-    # If missing, try to infer from summary + notes/body
-    if not start_obj:
-        from ml import extract_meeting_datetime
-        start_dt, end_dt = extract_meeting_datetime(
-            (meeting.get("summary") or "") + "\n" + (meeting.get("notes") or "")
-        )
-        if start_dt:
-            start_obj = date_parser.isoparse(start_dt)
-            if not raw_end:
-                raw_end = end_dt
-
-    # Default to now if parsing fails or datetime is in the past
-    if not start_obj or start_obj < now_utc:
+            start_obj = now_utc
+    else:
         start_obj = now_utc
 
-    # Parse end_datetime or set default duration
+    # Never schedule meetings in the past
+    if start_obj < now_utc:
+        start_obj = now_utc
+
+    start_dt = start_obj.isoformat()
+
+    # Parse end time or default to one hour after start
     if raw_end:
         try:
-            end_obj = date_parser.isoparse(raw_end)
+            end_obj = dateutil_parser.isoparse(raw_end)
         except Exception:
             end_obj = start_obj + timedelta(hours=1)
     else:
@@ -353,17 +344,14 @@ def create_google_calendar_event(meeting: dict):
     if end_obj <= start_obj:
         end_obj = start_obj + timedelta(hours=1)
 
-    # Convert to RFC3339 ISO strings
-    start_dt_iso = start_obj.isoformat()
-    end_dt_iso = end_obj.isoformat()
+    end_dt = end_obj.isoformat()
 
-    # Build the event payload
     event = {
         "summary": meeting.get("summary") or "Meeting",
         "location": meeting.get("location"),
-        "description": meeting.get("notes") or meeting.get("summary"),
-        "start": {"dateTime": start_dt_iso, "timeZone": "UTC"},
-        "end": {"dateTime": end_dt_iso, "timeZone": "UTC"},
+        "description": meeting.get("summary"),
+        "start": {"dateTime": start_dt, "timeZone": "UTC"},
+        "end": {"dateTime": end_dt, "timeZone": "UTC"},
         "attendees": [{"email": p} for p in meeting.get("participants", []) if p],
     }
 
