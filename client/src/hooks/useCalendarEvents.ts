@@ -22,11 +22,25 @@ export function useCalendarEvents() {
     }
   }, []);
 
+  const deleteEvent = useCallback(async (eventId: number) => {
+    setError(null);
+    try {
+      await api.deleteCalendarEvent(eventId);
+      // Remove the event from local state
+      setEvents(prevEvents => prevEvents.filter(event => event.id !== eventId));
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to delete calendar event';
+      setError(errorMessage);
+      throw err;
+    }
+  }, []);
+
   return {
     events,
     loading,
     error,
     loadEvents,
+    deleteEvent,
   };
 }
 

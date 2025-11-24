@@ -15,7 +15,6 @@ import logging
 from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
 
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -23,7 +22,6 @@ try:
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
-    logger.warning("OpenAI library not available - ML features will use fallback behavior")
 
 
 def clean_html_to_text(html: str) -> str:
@@ -108,8 +106,13 @@ def classify_and_generate_task(
         - reasoning: str - explanation of classification decision
         - meeting: dictoniary indicating if it should create a meeting, location, start and end time and participants.
     """
+    subject = payload.get("subject", "(No subject)")
+    
     if not OPENAI_AVAILABLE:
-        logger.warning("OpenAI library not available, using fallback behavior")
+        logger.warning(
+            f"Classification skipped - Subject: '{subject}' | "
+            f"Reason: OpenAI library not available, using default behavior"
+        )
         return {
             "should_create": True,
             "confidence": 0.5,
@@ -120,7 +123,10 @@ def classify_and_generate_task(
     
     api_key = api_key or os.getenv("OPENAI_API_KEY")
     if not api_key:
-        logger.warning("No OpenAI API key configured, using fallback behavior")
+        logger.warning(
+            f"Classification skipped - Subject: '{subject}' | "
+            f"Reason: No OpenAI API key configured, using default behavior"
+        )
         # Fallback: create task with original content
         return {
             "should_create": True,
@@ -134,7 +140,8 @@ def classify_and_generate_task(
     sender = payload.get("sender", "Unknown")
     subject = email_content.get("subject", "(No subject)")
     
-    logger.debug(f"Classifying email: subject='{subject}', sender='{sender}'")
+    # Log email being processed
+    logger.info(f"Processing email for classification - Subject: '{subject}', Sender: '{sender}'")
     
     # Build prompt for classification and generation
     prompt = f"""
@@ -219,7 +226,6 @@ For task notes:
 
     result: Dict[str, Any] = {}
     try:
-        logger.debug(f"Calling OpenAI API with model: {model}")
         client = OpenAI(api_key=api_key)
         
         response = client.chat.completions.create(
@@ -241,20 +247,46 @@ For task notes:
         
         result_text = response.choices[0].message.content
         result = json.loads(result_text)
-        logger.debug(f"OpenAI API response: should_create={result.get('should_create')}, confidence={result.get('confidence', 0):.2f}")
+        
+        # Extract classification results
+        should_create = bool(result.get("should_create", True))
+        confidence = float(result.get("confidence", 0.5))
+        reasoning = str(result.get("reasoning", ""))[:500]
+        title = str(result.get("title", email_content["subject"]))[:200]
+        meeting_info = result.get("meeting")
+        
+        # Log classification results
+        classification_status = "SUCCESS" if should_create else "SKIPPED"
+        logger.info(
+            f"Email classification completed - Subject: '{subject}' | "
+            f"Decision: {classification_status} | "
+            f"Confidence: {confidence:.2f} | "
+            f"Reasoning: {reasoning[:100]}{'...' if len(reasoning) > 100 else ''}"
+        )
+        
+        if meeting_info and meeting_info.get("is_meeting"):
+            logger.info(
+                f"Meeting detected in email - Subject: '{subject}' | "
+                f"Summary: '{meeting_info.get('summary', 'N/A')}' | "
+                f"Start: {meeting_info.get('start_datetime', 'N/A')}"
+            )
         
         # Validate and sanitize response
         return {
-            "should_create": bool(result.get("should_create", True)),
-            "confidence": float(result.get("confidence", 0.5)),
-            "title": str(result.get("title", email_content["subject"]))[:200],  # Limit length
+            "should_create": should_create,
+            "confidence": confidence,
+            "title": title,
             "notes": str(result.get("notes", email_content["body"] or email_content["snippet"]))[:2000],
-            "reasoning": str(result.get("reasoning", ""))[:500],
-            "meeting": result.get("meeting")
+            "reasoning": reasoning,
+            "meeting": meeting_info
         }
         
     except json.JSONDecodeError as e:
-        logger.error(f"Failed to parse OpenAI response as JSON: {e}")
+        # Log classification failure
+        logger.error(
+            f"Classification FAILED (JSON parsing error) - Subject: '{subject}' | "
+            f"Error: {str(e)} | Using fallback behavior"
+        )
         # Fallback to creating task
         return {
             "should_create": True,
@@ -264,7 +296,11 @@ For task notes:
             "reasoning": "JSON parsing failed, using fallback"
         }
     except Exception as e:
-        logger.error(f"Error calling OpenAI API: {e}", exc_info=True)
+        # Log classification failure
+        logger.error(
+            f"Classification FAILED (API error) - Subject: '{subject}' | "
+            f"Error: {str(e)} | Using fallback behavior"
+        )
         # Fallback to creating task
         return {
             "should_create": True,

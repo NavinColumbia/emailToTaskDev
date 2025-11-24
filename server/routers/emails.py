@@ -1,16 +1,15 @@
 from flask import Blueprint, session, request, jsonify
 from datetime import datetime, timezone, timedelta
 from dateutil import parser as dateutil_parser
+import logging
 from server.utils import get_gmail_service, get_current_user, message_to_payload
 from server.config import DEFAULT_PROVIDER, TASKS_LIST_TITLE
 from server.db import db_session, Email, Task, CalendarEvent
 from server.ml import ml_decide
 from server.providers.google_tasks import create_task as create_google_task, GoogleTasksError
-import logging
-
-logger = logging.getLogger(__name__)
 
 emails_bp = Blueprint('emails', __name__)
+logger = logging.getLogger(__name__)
 
 def get_optional_int_param(name: str, minimum: int | None = None, maximum: int | None = None) -> int | None:
     raw = request.values.get(name, None)
@@ -78,7 +77,6 @@ def gmail_list_ids(service, q: str, max_list: int | None = 50, min_internal_ms: 
 
     # Page size is capped by Gmail at 100 anyway
     page_size = 100 if max_list is None else min(100, max_list if max_list > 0 else 100)
-    logger.debug(f"Fetching Gmail messages: query='{q}', max_list={max_list}, page_size={page_size}")
 
     while True:
         page_num += 1
@@ -90,9 +88,7 @@ def gmail_list_ids(service, q: str, max_list: int | None = 50, min_internal_ms: 
                 .execute()
             )
             messages = resp.get("messages", [])
-            logger.debug(f"Gmail API page {page_num}: received {len(messages)} messages")
         except Exception as e:
-            logger.error(f"Error fetching Gmail messages (page {page_num}): {e}", exc_info=True)
             raise
 
         if min_internal_ms is None:
@@ -116,10 +112,8 @@ def gmail_list_ids(service, q: str, max_list: int | None = 50, min_internal_ms: 
 
         page_token = resp.get("nextPageToken")
         if not page_token:
-            logger.debug(f"Reached end of Gmail results after {page_num} page(s)")
             break
 
-    logger.debug(f"Total Gmail message IDs collected: {len(ids)}")
     return ids
 
 def get_or_create_email(session, user_id: int, message_id: str, meta: dict | None = None) -> Email:
@@ -148,16 +142,12 @@ def task_exists(session, user_id: int, email_id: int, provider: str) -> bool:
 
 def dispatch_task(provider: str, payload: dict) -> dict:
     from server.utils import get_tasks_service
-    logger.debug(f"Dispatching task to provider: {provider}")
     if provider == "google_tasks":
         tasks_service = get_tasks_service()
         if not tasks_service:
-            logger.error("Google Tasks service not available - not authenticated")
             raise GoogleTasksError("Not authenticated for Google Tasks")
-        logger.debug(f"Creating Google Task with title: {payload.get('subject', 'No title')}")
         return create_google_task(tasks_service, TASKS_LIST_TITLE, payload)
 
-    logger.error(f"Unsupported task provider: {provider}")
     raise ValueError(f"Unsupported provider '{provider}'")
 
 def create_google_calendar_event(meeting: dict):
@@ -169,7 +159,6 @@ def create_google_calendar_event(meeting: dict):
     from server.utils import get_calendar_service
     service = get_calendar_service()
     if not service:
-        logger.warning("Not authenticated for Google Calendar")
         return None
 
     raw_start = meeting.get("start_datetime")
@@ -216,10 +205,12 @@ def create_google_calendar_event(meeting: dict):
 
     try:
         created_event = service.events().insert(calendarId="primary", body=event).execute()
-        logger.info(f"Created Google Calendar event: {created_event.get('htmlLink')}")
         return created_event
     except Exception as e:
-        logger.error(f"Error creating Google Calendar event: {e}", exc_info=True)
+        logger.error(
+            f"Calendar event creation FAILED - Summary: '{event.get('summary', 'N/A')}' | "
+            f"Error: {str(e)}"
+        )
         return None
 
 @emails_bp.route("/fetch-emails", methods=["POST", "GET"])
@@ -227,11 +218,12 @@ def fetch_emails():
     logger.info("Fetch emails request received")
     service = get_gmail_service()
     if not service:
-        logger.warning("Fetch emails requested but not authenticated")
+        logger.warning("Fetch emails failed: Not authenticated")
         return jsonify({"error": "Not authenticated. Please log in first."}), 401
 
     user = get_current_user()
     if not user:
+        logger.warning("Fetch emails failed: Could not determine user")
         return jsonify({"error": "Could not determine user"}), 401
 
     provider = request.values.get("provider", DEFAULT_PROVIDER)
@@ -243,8 +235,10 @@ def fetch_emails():
     since_iso = request.values.get("since")
     dry_run = (request.values.get("dry_run", "false").lower() == "true")
     
-    logger.info(f"Fetch emails params: provider={provider}, window={window}, max={max_msgs}, "
-                f"since_hours={since_hours}, since={since_iso}, q={custom_query}, dry_run={dry_run}")
+    logger.info(
+        f"Fetch emails params: provider={provider}, window={window}, max={max_msgs}, "
+        f"since_hours={since_hours}, since={since_iso}, q={custom_query}, dry_run={dry_run}"
+    )
 
     # Build Gmail query
     query_parts = []
@@ -263,7 +257,6 @@ def fetch_emails():
 
     query = " ".join(query_parts) or "in:inbox"
     logger.info(f"Gmail query: {query}")
-
     logger.info(f"Fetching email IDs from Gmail (max={max_msgs})...")
     ids = gmail_list_ids(service, q=query, max_list=max_msgs, min_internal_ms=min_internal_ms)
     logger.info(f"Found {len(ids)} email(s) matching query")
@@ -291,14 +284,30 @@ def fetch_emails():
 
             payload = message_to_payload(full_msg)
             subject = payload.get("subject", "(No subject)")
-            logger.debug(f"Processing email {considered}/{len(ids)}: {subject[:50]}...")
+            sender = payload.get("sender", "Unknown")
+            message_id_short = message_id[:20] + "..." if len(message_id) > 20 else message_id
+
+            # Log email being processed
+            logger.info(
+                f"Processing email - ID: {message_id_short} | "
+                f"Subject: '{subject}' | "
+                f"Sender: '{sender}' | "
+                f"Received: {payload.get('received_at', 'N/A')}"
+            )
 
             # ML Classification and Task Generation
-            logger.debug(f"Running ML classification for email: {subject}")
             ml_result = ml_decide(payload)
             should_create = ml_result.get("should_create", True)
             confidence = ml_result.get("confidence", 0.5)
             reasoning = ml_result.get("reasoning", "")
+            
+            # Log classification decision
+            logger.info(
+                f"Email classification result - ID: {message_id_short} | "
+                f"Subject: '{subject}' | "
+                f"Should create task: {should_create} | "
+                f"Confidence: {confidence:.2f}"
+            )
 
             # Store email with ML metadata
             email_row = get_or_create_email(s, user.id, message_id, payload)
@@ -307,8 +316,19 @@ def fetch_emails():
             meeting_info = ml_result.get("meeting")
             calendar_event = None
             if meeting_info and meeting_info.get("is_meeting"):
+                logger.info(
+                    f"Creating calendar event - Email ID: {message_id_short} | "
+                    f"Subject: '{subject}' | "
+                    f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
+                )
                 calendar_event = create_google_calendar_event(meeting_info)
                 if calendar_event:
+                    logger.info(
+                        f"Calendar event created successfully - Email ID: {message_id_short} | "
+                        f"Event ID: {calendar_event.get('id')} | "
+                        f"Summary: '{calendar_event.get('summary', 'N/A')}'"
+                    )
+                    # Save calendar event to database
                     start_dt = None
                     end_dt = None
                     if calendar_event.get("start", {}).get("dateTime"):
@@ -341,15 +361,25 @@ def fetch_emails():
                         "start": calendar_event.get("start", {}).get("dateTime"),
                         "location": calendar_event.get("location"),
                     })
+                else:
+                    logger.warning(
+                        f"Calendar event creation failed - Email ID: {message_id_short} | "
+                        f"Subject: '{subject}' | "
+                        f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
+                    )
             
             # Skip if ML decides not to create task
             if not should_create:
+                logger.info(
+                    f"Email skipped (ML decision) - ID: {message_id_short} | "
+                    f"Subject: '{subject}' | "
+                    f"Reasoning: {reasoning[:100]}{'...' if len(reasoning) > 100 else ''}"
+                )
                 # Mark as processed but don't create task
                 if not email_row.first_processed_at:
                     email_row.first_processed_at = datetime.now(timezone.utc)
                 email_row.last_processed_at = datetime.now(timezone.utc)
                 email_row.processed = True
-                logger.info(f"Skipping email '{subject}' - ML decision: confidence={confidence:.2f}, reason={reasoning}")
                 continue
 
             # Use ML-generated title and notes
@@ -365,12 +395,15 @@ def fetch_emails():
 
             # Dedupe per provider
             if task_exists(s, user.id, email_row.id, provider):
+                logger.info(
+                    f"Email already processed - ID: {message_id_short} | "
+                    f"Subject: '{subject}' | "
+                    f"Provider: {provider}"
+                )
                 already_processed_count += 1
-                logger.debug(f"Email '{subject}' already processed for provider {provider}, skipping")
                 continue
 
             if dry_run:
-                logger.info(f"DRY RUN: Would create task for email '{subject}'")
                 created_tasks.append({
                     "message_id": message_id,
                     "provider": provider,
@@ -379,11 +412,25 @@ def fetch_emails():
                 continue
 
             try:
-                logger.info(f"Creating task for email '{subject}' with provider {provider}")
                 task = dispatch_task(provider, payload)
-                logger.info(f"Task created successfully: {task.get('id', 'unknown')} - {task.get('title', 'no title')}")
+                task_id = task.get("id") if isinstance(task, dict) else None
+                task_title = task.get("title") if isinstance(task, dict) else subject
+                
+                logger.info(
+                    f"Task created successfully - Email ID: {message_id_short} | "
+                    f"Subject: '{subject}' | "
+                    f"Task ID: {task_id} | "
+                    f"Task Title: '{task_title}' | "
+                    f"Provider: {provider} | "
+                    f"Confidence: {confidence:.2f}"
+                )
             except Exception as err:
-                logger.error(f"Error creating task for email '{subject}': {err}", exc_info=True)
+                logger.error(
+                    f"Task creation FAILED - Email ID: {message_id_short} | "
+                    f"Subject: '{subject}' | "
+                    f"Provider: {provider} | "
+                    f"Error: {str(err)}"
+                )
                 return jsonify({"error": f"Error creating task: {str(err)}"}), 400
 
             # Record task in DB
@@ -418,10 +465,11 @@ def fetch_emails():
         "considered": considered,
         "calendar_events": created_calendar_events
     }
-    
-    logger.info(f"Email processing complete: {len(created_tasks)} tasks created, "
-                f"{already_processed_count} already processed, {len(ids)} total found, "
-                f"{considered} considered")
+
+    logger.info(
+        f"Email processing complete: {len(created_tasks)} tasks created, "
+        f"{already_processed_count} already processed, {len(ids)} total found, {considered} considered"
+    )
 
     return jsonify(result)
 

@@ -3,9 +3,6 @@ from datetime import datetime, timezone
 from server.utils import get_current_user
 from server.db import db_session, UserSettings
 from sqlalchemy import select
-import logging
-
-logger = logging.getLogger(__name__)
 
 settings_bp = Blueprint('settings', __name__)
 
@@ -36,9 +33,8 @@ def get_settings():
             return jsonify({
                 "max": user_settings.max,
                 "window": user_settings.window,
-            })
+                })
     except Exception as e:
-        logger.error(f"Error fetching settings: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch settings"}), 500
 
 @settings_bp.route("/settings", methods=["PUT", "POST"])
@@ -82,7 +78,6 @@ def update_settings():
                 s.add(user_settings)
             
             s.flush()
-            logger.info(f"Settings updated for user {user_id}")
             
             # Extract values before session closes
             result = {
@@ -92,6 +87,5 @@ def update_settings():
 
         return jsonify(result)
     except Exception as e:
-        logger.error(f"Error updating settings: {e}", exc_info=True)
         return jsonify({"error": "Failed to update settings"}), 500
 

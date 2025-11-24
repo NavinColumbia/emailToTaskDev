@@ -22,6 +22,7 @@ export type Task = {
 };
 
 export type CalendarEvent = {
+  id: number;
   google_event_id?: string;
   summary: string;
   location?: string;
@@ -169,6 +170,18 @@ class ApiService {
     if (!response.ok) {
       const error = await response.json().catch(() => ({ error: 'Unknown error' }));
       throw new Error(error.error || 'Failed to delete task');
+    }
+  }
+
+  async deleteCalendarEvent(eventId: number): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/calendar-events/${eventId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to delete calendar event');
     }
   }
 

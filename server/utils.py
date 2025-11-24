@@ -9,9 +9,6 @@ from bs4 import BeautifulSoup
 from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 from server.db import db_session, User
-import logging
-
-logger = logging.getLogger(__name__)
 
 # SCOPES: Gmail read-only + Google Tasks write
 SCOPES = [
@@ -57,7 +54,6 @@ def get_or_create_user(session, email: str) -> User:
     )
     session.add(user)
     session.flush()
-    logger.info(f"Created new user: {email}")
     return user
 
 def get_current_user() -> User | None:
@@ -74,7 +70,6 @@ def get_current_user() -> User | None:
             else:
                 return None
         except Exception as e:
-            logger.error(f"Error getting user email: {e}", exc_info=True)
             return None
     
     user_email = session["user_email"]

@@ -17,8 +17,6 @@ import { notionColors } from '../theme';
 import { useTasks, useCalendarEvents, useFetchEmails, useSettings } from '../hooks';
 import PageHeader from '../components/PageHeader';
 import ProcessEmailsForm from '../components/ProcessEmailsForm';
-import NewTasksTable from '../components/NewTasksTable';
-import NewEventsTable from '../components/NewEventsTable';
 import TasksTable from '../components/TasksTable';
 import EventsTable from '../components/EventsTable';
 
@@ -53,9 +51,9 @@ export default function Converter({ authenticated }: ConverterProps) {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [tabValue, setTabValue] = useState(0);
   
-  const { tasks: allTasks, loading: loadingTasks, loadTasks, deleteTask } = useTasks();
+  const { tasks: allTasks, loading: loadingTasks, loadTasks } = useTasks();
   const { events: allCalendarEvents, loading: loadingCalendarEvents, loadEvents } = useCalendarEvents();
-  const { result: results, loading, error, fetchEmails } = useFetchEmails();
+  const { result: results, loading, fetchEmails } = useFetchEmails();
   const { settings } = useSettings(authenticated);
   
   // Compute base formData from settings
@@ -93,6 +91,7 @@ export default function Converter({ authenticated }: ConverterProps) {
     }
   }, [authenticated, tabValue, loadTasks, loadEvents]);
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -123,11 +122,6 @@ export default function Converter({ authenticated }: ConverterProps) {
         setSnackbarMessage(message);
         setSnackbarSeverity('success');
         setShowSnackbar(true);
-        if (tabValue === 1) {
-          loadTasks().catch(() => {});
-        } else if (tabValue === 2) {
-          loadEvents().catch(() => {});
-        }
       }
     } catch (err) {
       setSnackbarMessage(err instanceof Error ? err.message : 'An error occurred');
@@ -150,7 +144,7 @@ export default function Converter({ authenticated }: ConverterProps) {
 
     return (
       <>
-      <Box sx={{ maxWidth: 900, mx: 'auto', px: 3, pt: 4 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3, pt: 4 }}>
         <Box sx={{ mb: 4 }}>
           <PageHeader />
 
@@ -171,31 +165,21 @@ export default function Converter({ authenticated }: ConverterProps) {
               onFormDataChange={setFormData}
               onSubmit={handleSubmit}
               loading={loading}
-              error={error}
             />
             {results && (
               <>
-                <NewTasksTable results={results} />
-                <NewEventsTable results={results} />
+                <TasksTable results={results} />
+                <EventsTable results={results} />
               </>
             )}
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <TasksTable
-              tasks={allTasks}
-              loading={loadingTasks}
-              onRefresh={loadTasks}
-              onDelete={deleteTask}
-            />
+            <TasksTable allTasks={allTasks} loading={loadingTasks} />
           </TabPanel>
 
           <TabPanel value={tabValue} index={2}>
-            <EventsTable
-              events={allCalendarEvents}
-              loading={loadingCalendarEvents}
-              onRefresh={loadEvents}
-            />
+            <EventsTable allEvents={allCalendarEvents} loading={loadingCalendarEvents} />
           </TabPanel>
               </Box>
             </Box>

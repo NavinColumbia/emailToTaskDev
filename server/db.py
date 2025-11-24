@@ -101,24 +101,17 @@ class UserSettings(Base):
     user: Mapped["User"] = relationship("User", back_populates="settings")
 
 def init_db():
-    import logging
-    logger = logging.getLogger(__name__)
-    
     recreate_db = os.getenv("RECREATE_DB", "false").lower() == "true"
     
     if recreate_db:
-        logger.info("RECREATE_DB flag is set - dropping and recreating all tables")
         try:
             Base.metadata.drop_all(engine)
-            logger.info("Dropped all existing tables")
         except Exception as e:
-            logger.warning(f"Error dropping tables (may not exist): {e}")
+            pass
     
     try:
         Base.metadata.create_all(engine, checkfirst=True)
-        logger.info("Database initialization successful")
     except Exception as e:
-        logger.error(f"Database initialization failed: {e}")
         raise
 
 @contextmanager

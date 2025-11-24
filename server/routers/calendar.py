@@ -1,18 +1,13 @@
 from flask import Blueprint, session, jsonify
-from server.utils import get_current_user
+from server.utils import get_current_user, get_calendar_service
 from server.db import db_session, CalendarEvent, Email
 from sqlalchemy import select
-import logging
-
-logger = logging.getLogger(__name__)
 
 calendar_bp = Blueprint('calendar', __name__)
 
 @calendar_bp.route("/calendar-events/all")
 def api_all_calendar_events():
-    logger.info("Fetching all calendar events")
     if "credentials" not in session:
-        logger.warning("All calendar events requested but not authenticated")
         return jsonify({"error": "Not authenticated"}), 401
 
     user = get_current_user()
@@ -36,6 +31,7 @@ def api_all_calendar_events():
             for row in rows:
                 ce, e = row
                 items.append({
+                    "id": ce.id,
                     "google_event_id": ce.google_event_id,
                     "summary": ce.summary or "Meeting",
                     "location": ce.location,
@@ -47,9 +43,49 @@ def api_all_calendar_events():
                     "email_sender": e.sender,
                     "email_received_at": e.received_at.isoformat() if e.received_at else "",
                 })
-            logger.info(f"Retrieved {len(items)} calendar events from database")
         return jsonify({"events": items, "total": len(items)})
     except Exception as e:
-        logger.error(f"Error fetching all calendar events: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch calendar events"}), 500
+
+
+@calendar_bp.route("/calendar-events/<event_id>", methods=["DELETE"])
+def delete_calendar_event(event_id: str):
+    """Delete a calendar event from Google Calendar and the database."""
+    if "credentials" not in session:
+        return jsonify({"error": "Not authenticated"}), 401
+
+    user = get_current_user()
+    if not user:
+        return jsonify({"error": "Could not determine user"}), 401
+
+    user_id = user.id
+
+    try:
+        with db_session() as s:
+            # Find the calendar event in the database
+            stmt = select(CalendarEvent).where(CalendarEvent.id == int(event_id)).where(CalendarEvent.user_id == user_id)
+            calendar_event = s.execute(stmt).scalar_one_or_none()
+            
+            if not calendar_event:
+                return jsonify({"error": "Calendar event not found"}), 404
+
+            # Delete from Google Calendar if we have the google_event_id
+            google_event_id = calendar_event.google_event_id
+            if google_event_id:
+                calendar_service = get_calendar_service()
+                if calendar_service:
+                    try:
+                        calendar_service.events().delete(calendarId="primary", eventId=google_event_id).execute()
+                    except Exception as e:
+                        # Continue to delete from database even if Google Calendar deletion fails
+                        pass
+
+            # Delete from database
+            s.delete(calendar_event)
+
+        return jsonify({"message": "Calendar event deleted successfully"})
+    except ValueError:
+        return jsonify({"error": "Invalid event ID"}), 400
+    except Exception as e:
+        return jsonify({"error": "Failed to delete calendar event"}), 500
 

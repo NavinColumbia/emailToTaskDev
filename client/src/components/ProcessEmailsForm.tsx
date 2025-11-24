@@ -1,7 +1,6 @@
 import {
   Box,
   Button,
-  Alert,
   CircularProgress,
 } from '@mui/material';
 import {
@@ -17,7 +16,6 @@ interface ProcessEmailsFormProps {
   onFormDataChange: (data: FetchEmailsParams) => void;
   onSubmit: (e: React.FormEvent) => Promise<void>;
   loading: boolean;
-  error: string | null;
 }
 
 export default function ProcessEmailsForm({
@@ -25,7 +23,6 @@ export default function ProcessEmailsForm({
   onFormDataChange,
   onSubmit,
   loading,
-  error,
 }: ProcessEmailsFormProps) {
   return (
     <Box component="form" onSubmit={onSubmit}>
@@ -62,15 +59,6 @@ export default function ProcessEmailsForm({
           {loading ? 'Processing...' : 'Process Emails'}
         </Button>
       </Box>
-
-      {error && (
-        <Alert 
-          severity="error" 
-          sx={{ mt: 3 }}
-        >
-          {error}
-        </Alert>
-      )}
     </Box>
   );
 }

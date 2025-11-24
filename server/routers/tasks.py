@@ -3,17 +3,12 @@ from server.utils import get_current_user, get_tasks_service
 from server.db import db_session, Task, Email
 from server.providers.google_tasks import delete_task as delete_google_task, GoogleTasksError
 from sqlalchemy import select
-import logging
-
-logger = logging.getLogger(__name__)
 
 tasks_bp = Blueprint('tasks', __name__)
 
 @tasks_bp.route("/tasks/all")
 def api_all_results():
-    logger.info("Fetching all tasks")
     if "credentials" not in session:
-        logger.warning("All tasks requested but not authenticated")
         return jsonify({"error": "Not authenticated"}), 401
 
     user = get_current_user()
@@ -50,19 +45,15 @@ def api_all_results():
                     "task_link": md.get("webLink") or md.get("selfLink"),
                     "task_due": md.get("due"),
                 })
-            logger.info(f"Retrieved {len(items)} tasks from database")
         return jsonify({"tasks": items, "total": len(items)})
     except Exception as e:
-        logger.error(f"Error fetching all tasks: {e}", exc_info=True)
         return jsonify({"error": "Failed to fetch tasks"}), 500
 
 
 @tasks_bp.route("/tasks/<task_id>", methods=["DELETE"])
 def delete_task(task_id: str):
     """Delete a task from Google Tasks and the database."""
-    logger.info(f"Delete task request received for task_id: {task_id}")
     if "credentials" not in session:
-        logger.warning("Delete task requested but not authenticated")
         return jsonify({"error": "Not authenticated"}), 401
 
     user = get_current_user()
@@ -78,7 +69,6 @@ def delete_task(task_id: str):
             task = s.execute(stmt).scalar_one_or_none()
             
             if not task:
-                logger.warning(f"Task {task_id} not found for user {user_id}")
                 return jsonify({"error": "Task not found"}), 404
 
             # Get task metadata to find tasklist_id and provider_task_id
@@ -87,7 +77,6 @@ def delete_task(task_id: str):
             tasklist_id = metadata.get("_tasklist_id")
 
             if not provider_task_id:
-                logger.warning(f"Task {task_id} has no provider_task_id, deleting from database only")
                 s.delete(task)
                 return jsonify({"message": "Task deleted from database"})
 
@@ -95,25 +84,20 @@ def delete_task(task_id: str):
             if task.provider == "google_tasks" and tasklist_id:
                 tasks_service = get_tasks_service()
                 if not tasks_service:
-                    logger.error("Google Tasks service not available")
                     return jsonify({"error": "Not authenticated for Google Tasks"}), 401
                 
                 try:
                     delete_google_task(tasks_service, tasklist_id, provider_task_id)
-                    logger.info(f"Task {provider_task_id} deleted from Google Tasks")
                 except GoogleTasksError as e:
-                    logger.warning(f"Failed to delete task from Google Tasks: {e}, deleting from database only")
                     # Continue to delete from database even if Google Tasks deletion fails
+                    pass
 
             # Delete from database
             s.delete(task)
-            logger.info(f"Task {task_id} deleted from database")
 
         return jsonify({"message": "Task deleted successfully"})
     except ValueError:
-        logger.error(f"Invalid task_id: {task_id}")
         return jsonify({"error": "Invalid task ID"}), 400
     except Exception as e:
-        logger.error(f"Error deleting task: {e}", exc_info=True)
         return jsonify({"error": "Failed to delete task"}), 500
 

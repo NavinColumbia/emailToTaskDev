@@ -3,6 +3,7 @@ import os
 import sys
 import logging
 from pathlib import Path
+from logging.handlers import RotatingFileHandler
 from flask import Flask, request
 from flask_cors import CORS
 
@@ -16,11 +17,20 @@ from server.db import init_db
 from server.routers import auth, tasks, calendar, emails, settings
 
 # Configure logging
+log_dir = Path(project_root) / "logs"
+log_dir.mkdir(exist_ok=True)
+log_file = log_dir / "app.log"
+
+# Set up logging with file handler
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    handlers=[
+        RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5),
+        logging.StreamHandler(sys.stdout)
+    ]
 )
+
 logger = logging.getLogger(__name__)
 
 # Create Flask app
@@ -45,18 +55,6 @@ logger.info("Initializing database...")
 init_db()
 logger.info("Database initialized successfully")
 
-# Request logging middleware
-@app.before_request
-def log_request_info():
-    logger.info(f"Request: {request.method} {request.path} - IP: {request.remote_addr}")
-    if request.method in ['POST', 'PUT', 'PATCH']:
-        logger.debug(f"Request data: {dict(request.values)}")
-
-@app.after_request
-def log_response_info(response):
-    logger.info(f"Response: {request.method} {request.path} - Status: {response.status_code}")
-    return response
-
 @app.route('/')
 def index():
     return "Hello, World!"
@@ -65,5 +63,5 @@ if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     port = int(os.getenv("PORT", 5001))
     logger.info(f"Starting Flask server on localhost:{port}")
-    logger.info(f"Debug mode: True")
+    logger.info(f"Debug mode: {os.getenv('FLASK_ENV') != 'production'}")
     app.run("localhost", port, debug=True)
