@@ -4,7 +4,6 @@ import { api, type Settings } from '../api';
 const DEFAULT_SETTINGS: Settings = {
   max: undefined,
   window: '',
-  dry_run: false,
 };
 
 export function useSettings(authenticated: boolean) {

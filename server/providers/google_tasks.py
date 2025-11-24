@@ -103,3 +103,21 @@ def create_task(
         "webLink": web_url,
         "_tasklist_id": list_id,
     }
+
+
+def delete_task(
+    tasks_service: Resource,
+    tasklist_id: str,
+    task_id: str,
+) -> None:
+    """
+    Delete a Google Task from the specified tasklist.
+    """
+
+    try:
+        logger.debug(f"Deleting task {task_id} from tasklist {tasklist_id}")
+        tasks_service.tasks().delete(tasklist=tasklist_id, task=task_id).execute()
+        logger.info(f"Google Task deleted successfully: id={task_id}")
+    except Exception as e:
+        logger.error(f"Error deleting Google Task: {e}", exc_info=True)
+        raise GoogleTasksError(f"Error deleting task: {str(e)}")

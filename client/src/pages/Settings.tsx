@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   Box,
-  TextField,
-  MenuItem,
   Button,
   Typography,
   Snackbar,
@@ -15,6 +13,8 @@ import {
 } from '@mui/icons-material';
 import { notionColors } from '../theme';
 import { useSettings } from '../hooks';
+import MaxEmails from '../components/filter-inputs/MaxEmails';
+import TimeWindow from '../components/filter-inputs/TimeWindow';
 
 interface SettingsProps {
   authenticated: boolean;
@@ -102,45 +102,25 @@ export default function Settings({ authenticated }: SettingsProps) {
           }}
         >
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <TextField
-              type="number"
+            <MaxEmails
+              value={settings.max}
+              onChange={(max) => setSettings({ ...settings, max })}
               label="Default Max Emails"
-              value={settings.max || ''}
-              onChange={(e) => setSettings({ ...settings, max: e.target.value ? Number(e.target.value) : undefined })}
               placeholder="No limit"
               helperText="Maximum number of emails to process by default (leave empty for no limit)"
-              slotProps={{ htmlInput: { min: 1 } }}
               fullWidth
               disabled={saving}
             />
 
-            <TextField
-              select
-              label="Default Time Window"
+            <TimeWindow
               value={settings.window}
-              onChange={(e) => setSettings({ ...settings, window: e.target.value })}
+              onChange={(window) => setSettings({ ...settings, window })}
+              label="Default Time Window"
               helperText="Default time window for email search"
               fullWidth
               disabled={saving}
-            >
-              <MenuItem value="">All emails</MenuItem>
-              <MenuItem value="1d">Last 24 hours</MenuItem>
-              <MenuItem value="7d">Last 7 days</MenuItem>
-              <MenuItem value="30d">Last 30 days</MenuItem>
-            </TextField>
-
-            <TextField
-              select
-              label="Default Dry Run Mode"
-              value={settings.dry_run ? 'true' : 'false'}
-              onChange={(e) => setSettings({ ...settings, dry_run: e.target.value === 'true' })}
-              helperText="When enabled, emails are processed but no tasks are created (for testing)"
-              fullWidth
-              disabled={saving}
-            >
-              <MenuItem value="false">No</MenuItem>
-              <MenuItem value="true">Yes</MenuItem>
-            </TextField>
+              showCustomOption={false}
+            />
 
             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
               <Button

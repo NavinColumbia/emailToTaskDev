@@ -17,10 +17,10 @@ import { notionColors } from '../theme';
 import { useTasks, useCalendarEvents, useFetchEmails, useSettings } from '../hooks';
 import PageHeader from '../components/PageHeader';
 import ProcessEmailsForm from '../components/ProcessEmailsForm';
-import CreatedTasksList from '../components/CreatedTasksList';
-import CreatedCalendarEvents from '../components/CreatedCalendarEvents';
-import AllTasksTable from '../components/AllTasksTable';
-import AllCalendarEventsTable from '../components/AllCalendarEventsTable';
+import NewTasksTable from '../components/NewTasksTable';
+import NewEventsTable from '../components/NewEventsTable';
+import TasksTable from '../components/TasksTable';
+import EventsTable from '../components/EventsTable';
 
 interface ConverterProps {
   authenticated: boolean;
@@ -53,7 +53,7 @@ export default function Converter({ authenticated }: ConverterProps) {
   const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error' | 'info' | 'warning'>('success');
   const [tabValue, setTabValue] = useState(0);
   
-  const { tasks: allTasks, loading: loadingTasks, loadTasks } = useTasks();
+  const { tasks: allTasks, loading: loadingTasks, loadTasks, deleteTask } = useTasks();
   const { events: allCalendarEvents, loading: loadingCalendarEvents, loadEvents } = useCalendarEvents();
   const { result: results, loading, error, fetchEmails } = useFetchEmails();
   const { settings } = useSettings(authenticated);
@@ -63,10 +63,9 @@ export default function Converter({ authenticated }: ConverterProps) {
     provider: 'google_tasks', // Always use Google Tasks
     max: settings?.max,
     window: settings?.window || '',
-    since_hours: undefined,
-    since: '',
-    q: '',
-    dry_run: settings?.dry_run || false,
+          since_hours: undefined,
+          since: '',
+          q: '',
   }), [settings]);
   
   const [formData, setFormData] = useState<FetchEmailsParams>(baseFormData);
@@ -103,7 +102,6 @@ export default function Converter({ authenticated }: ConverterProps) {
         provider: 'google_tasks', // Always use Google Tasks
         max: formData.max ? Number(formData.max) : undefined,
         since_hours: formData.since_hours ? Number(formData.since_hours) : undefined,
-        dry_run: formData.dry_run || false,
       };
 
       const result = await fetchEmails(params);
@@ -177,22 +175,23 @@ export default function Converter({ authenticated }: ConverterProps) {
             />
             {results && (
               <>
-                <CreatedTasksList results={results} />
-                <CreatedCalendarEvents results={results} />
+                <NewTasksTable results={results} />
+                <NewEventsTable results={results} />
               </>
             )}
           </TabPanel>
 
           <TabPanel value={tabValue} index={1}>
-            <AllTasksTable
+            <TasksTable
               tasks={allTasks}
               loading={loadingTasks}
               onRefresh={loadTasks}
+              onDelete={deleteTask}
             />
           </TabPanel>
 
           <TabPanel value={tabValue} index={2}>
-            <AllCalendarEventsTable
+            <EventsTable
               events={allCalendarEvents}
               loading={loadingCalendarEvents}
               onRefresh={loadEvents}

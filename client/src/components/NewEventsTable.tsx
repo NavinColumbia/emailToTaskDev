@@ -3,11 +3,11 @@ import { Event as EventIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-mater
 import { notionColors } from '../theme';
 import type { FetchEmailsResponse } from '../api';
 
-interface CreatedCalendarEventsProps {
+interface NewEventsTableProps {
   results: FetchEmailsResponse;
 }
 
-export default function CreatedCalendarEvents({ results }: CreatedCalendarEventsProps) {
+export default function NewEventsTable({ results }: NewEventsTableProps) {
   if (!results.calendar_events || results.calendar_events.length === 0) {
     return null;
   }

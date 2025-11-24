@@ -3,11 +3,11 @@ import { CheckCircle as CheckCircleIcon, OpenInNew as OpenInNewIcon } from '@mui
 import { notionColors } from '../theme';
 import type { FetchEmailsResponse } from '../api';
 
-interface CreatedTasksListProps {
+interface NewTasksTableProps {
   results: FetchEmailsResponse;
 }
 
-export default function CreatedTasksList({ results }: CreatedTasksListProps) {
+export default function NewTasksTable({ results }: NewTasksTableProps) {
   if (!results.created || results.created.length === 0) {
     return null;
   }

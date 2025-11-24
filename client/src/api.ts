@@ -9,6 +9,7 @@ export type FetchEmailsParams = {
 };
 
 export type Task = {
+  id: number;
   provider: string;
   provider_task_id: string;
   created_at: string;
@@ -159,6 +160,18 @@ class ApiService {
     return await response.json();
   }
 
+  async deleteTask(taskId: number): Promise<void> {
+    const response = await fetch(`${this.baseUrl}/tasks/${taskId}`, {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to delete task');
+    }
+  }
+
   async getSettings(): Promise<Settings> {
     const response = await fetch(`${this.baseUrl}/settings`, {
       credentials: 'include',
@@ -194,7 +207,6 @@ class ApiService {
 export type Settings = {
   max?: number;
   window: string;
-  dry_run: boolean;
 };
 
 export const api = new ApiService();

@@ -1,16 +1,35 @@
-import { Box, Typography, Button, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip } from '@mui/material';
-import { List as ListIcon, Refresh as RefreshIcon, OpenInNew as OpenInNewIcon } from '@mui/icons-material';
+import { useState } from 'react';
+import { Box, Typography, Button, CircularProgress, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Chip, IconButton, Tooltip } from '@mui/material';
+import { List as ListIcon, Refresh as RefreshIcon, OpenInNew as OpenInNewIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { notionColors } from '../theme';
 import { formatDate } from '../utils/dateUtils';
 import type { Task } from '../api';
 
-interface AllTasksTableProps {
+interface TasksTableProps {
   tasks: Task[];
   loading: boolean;
   onRefresh: () => void;
+  onDelete: (taskId: number) => Promise<void>;
 }
 
-export default function AllTasksTable({ tasks, loading, onRefresh }: AllTasksTableProps) {
+export default function TasksTable({ tasks, loading, onRefresh, onDelete }: TasksTableProps) {
+  const [deletingTaskId, setDeletingTaskId] = useState<number | null>(null);
+
+  const handleDelete = async (taskId: number) => {
+    if (!confirm('Are you sure you want to delete this task? This will remove it from Google Tasks and cannot be undone.')) {
+      return;
+    }
+
+    setDeletingTaskId(taskId);
+    try {
+      await onDelete(taskId);
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+      alert(error instanceof Error ? error.message : 'Failed to delete task');
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
@@ -101,18 +120,39 @@ export default function AllTasksTable({ tasks, loading, onRefresh }: AllTasksTab
                   </TableCell>
                   <TableCell sx={{ fontSize: '14px' }}>{task.task_due ? formatDate(task.task_due) : '—'}</TableCell>
                   <TableCell>
-                    <Button
-                      component="a"
-                      href={task.task_link && !task.task_link.includes('googleapis.com') ? task.task_link : "https://tasks.google.com/"}
-                      target="_blank"
-                      rel="noopener"
-                      size="small"
-                      startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
-                      variant="outlined"
-                      sx={{ fontSize: '12px', px: 1.5, py: 0.5 }}
-                    >
-                      Open
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <Button
+                        component="a"
+                        href={task.task_link && !task.task_link.includes('googleapis.com') ? task.task_link : "https://tasks.google.com/"}
+                        target="_blank"
+                        rel="noopener"
+                        size="small"
+                        startIcon={<OpenInNewIcon sx={{ fontSize: 14 }} />}
+                        variant="outlined"
+                        sx={{ fontSize: '12px', px: 1.5, py: 0.5 }}
+                      >
+                        Open
+                      </Button>
+                      <Tooltip title="Delete task">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDelete(task.id)}
+                          disabled={deletingTaskId === task.id}
+                          sx={{ 
+                            color: notionColors.text.secondary,
+                            '&:hover': {
+                              color: 'error.main',
+                            }
+                          }}
+                        >
+                          {deletingTaskId === task.id ? (
+                            <CircularProgress size={16} />
+                          ) : (
+                            <DeleteIcon sx={{ fontSize: 18 }} />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
                   </TableCell>
                 </TableRow>
               ))}

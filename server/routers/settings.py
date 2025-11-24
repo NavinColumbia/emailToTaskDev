@@ -31,13 +31,11 @@ def get_settings():
                 return jsonify({
                     "max": None,
                     "window": "",
-                    "dry_run": False,
                 })
             
             return jsonify({
                 "max": user_settings.max,
                 "window": user_settings.window,
-                "dry_run": user_settings.dry_run,
             })
     except Exception as e:
         logger.error(f"Error fetching settings: {e}", exc_info=True)
@@ -62,7 +60,6 @@ def update_settings():
 
         max_value = data.get("max")
         window = data.get("window", "")
-        dry_run = data.get("dry_run", False)
 
         with db_session() as s:
             stmt = select(UserSettings).where(UserSettings.user_id == user_id)
@@ -73,7 +70,6 @@ def update_settings():
                 user_settings.provider = "google_tasks"
                 user_settings.max = max_value
                 user_settings.window = window
-                user_settings.dry_run = dry_run
                 user_settings.updated_at = datetime.now(timezone.utc)
             else:
                 # Create new settings
@@ -82,7 +78,6 @@ def update_settings():
                     provider="google_tasks",
                     max=max_value,
                     window=window,
-                    dry_run=dry_run,
                 )
                 s.add(user_settings)
             
@@ -93,7 +88,6 @@ def update_settings():
             result = {
                 "max": user_settings.max,
                 "window": user_settings.window,
-                "dry_run": user_settings.dry_run,
             }
 
         return jsonify(result)

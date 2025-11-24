@@ -4,13 +4,13 @@ import { notionColors } from '../theme';
 import { formatDate } from '../utils/dateUtils';
 import type { CalendarEvent } from '../api';
 
-interface AllCalendarEventsTableProps {
+interface EventsTableProps {
   events: CalendarEvent[];
   loading: boolean;
   onRefresh: () => void;
 }
 
-export default function AllCalendarEventsTable({ events, loading, onRefresh }: AllCalendarEventsTableProps) {
+export default function EventsTable({ events, loading, onRefresh }: EventsTableProps) {
   return (
     <>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>

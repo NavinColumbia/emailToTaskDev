@@ -94,7 +94,6 @@ class UserSettings(Base):
     provider: Mapped[str] = mapped_column(Text, nullable=False, default="google_tasks")
     max: Mapped[int | None] = mapped_column(Integer)
     window: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    dry_run: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, onupdate=lambda: datetime.now(timezone.utc))
     
