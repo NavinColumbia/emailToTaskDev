@@ -61,7 +61,7 @@ export type FetchEmailsResponse = {
 };
 
 class ApiService {
-  private baseUrl = import.meta.env.VITE_API_BASE_URL;
+  private baseUrl = import.meta.env.VITE_API_BASE_URL || '';
 
   async checkAuth(): Promise<boolean> {
     try {
@@ -158,7 +158,44 @@ class ApiService {
 
     return await response.json();
   }
+
+  async getSettings(): Promise<Settings> {
+    const response = await fetch(`${this.baseUrl}/settings`, {
+      credentials: 'include',
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to fetch settings');
+    }
+
+    return await response.json();
+  }
+
+  async updateSettings(settings: Settings): Promise<Settings> {
+    const response = await fetch(`${this.baseUrl}/settings`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(settings),
+    });
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+      throw new Error(error.error || 'Failed to update settings');
+    }
+
+    return await response.json();
+  }
 }
+
+export type Settings = {
+  max?: number;
+  window: string;
+  dry_run: boolean;
+};
 
 export const api = new ApiService();
 

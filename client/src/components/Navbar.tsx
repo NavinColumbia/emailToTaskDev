@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
-import { Email as EmailIcon} from '@mui/icons-material';
+import { Email as EmailIcon, Settings as SettingsIcon, AutoAwesome as ConverterIcon} from '@mui/icons-material';
 import { api } from '../api';
 import { notionColors } from '../theme';
 
@@ -10,6 +10,7 @@ interface NavbarProps {
 }
 
 export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
+  const location = useLocation();
   const handleLogout = async () => {
     await api.logout();
     onAuthChange();
@@ -56,12 +57,36 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
         <Box sx={{ flexGrow: 1 }} />
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           {authenticated && (
+            <>
+              <Button
+                component={Link}
+                to="/converter"
+                variant="text"
+                startIcon={<ConverterIcon />}
+                sx={{
+                  color: location.pathname === '/converter' ? notionColors.text.primary : notionColors.text.secondary,
+                }}
+              >
+                Converter
+              </Button>
+              <Button
+                component={Link}
+                to="/settings"
+                variant="text"
+                startIcon={<SettingsIcon />}
+                sx={{
+                  color: location.pathname === '/settings' ? notionColors.text.primary : notionColors.text.secondary,
+                }}
+              >
+                Settings
+              </Button>
               <Button
                 onClick={handleLogout}
               variant="text"
               >
                 Logout
               </Button>
+            </>
           )}
         </Box>
       </Toolbar>

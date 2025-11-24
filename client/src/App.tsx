@@ -1,33 +1,21 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { useState, useEffect, useCallback } from 'react';
+import { useEffect } from 'react';
 import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
-import { api } from './api';
+import { useAuth } from './hooks';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
+import Converter from './pages/Converter';
+import Settings from './pages/Settings';
 import { theme, notionColors } from './theme';
 
 function App() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
-
-  const checkAuth = useCallback(async () => {
-    const isAuth = await api.checkAuth();
-    setAuthenticated(isAuth);
-  }, []);
+  const { authenticated, loading, checkAuth } = useAuth();
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const isAuth = await api.checkAuth();
-      if (!cancelled) {
-        setAuthenticated(isAuth);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    checkAuth();
+  }, [checkAuth]);
 
-  if (authenticated === null) {
+  if (loading || authenticated === null) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
@@ -47,6 +35,8 @@ function App() {
           <Box sx={{ maxWidth: '900px', width: '100%', mx: 'auto' }}>
             <Routes>
               <Route path="/" element={<Home authenticated={authenticated} />} />
+              <Route path="/converter" element={<Converter authenticated={authenticated} />} />
+              <Route path="/settings" element={<Settings authenticated={authenticated} />} />
               <Route path="*" element={<Home authenticated={authenticated} />} />
             </Routes>
           </Box>

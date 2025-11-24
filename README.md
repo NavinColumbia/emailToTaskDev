@@ -55,7 +55,7 @@ A powerful Flask application that automatically converts Gmail emails into tasks
    ```
 
 4. **Open your browser**
-   Navigate to `http://127.0.0.1:5001`
+   Navigate to `http://localhost:5001`
 
 ## 🔧 Manual Setup
 
@@ -77,7 +77,7 @@ pip3 install -r requirements.txt
    - Google Calendar API
 4. Go to "Credentials" and create OAuth 2.0 Client ID
 5. Set application type to "Web application"
-6. Add `http://127.0.0.1:5001/oauth2callback` to authorized redirect URIs
+6. Add `http://localhost:5173/oauth2callback` to authorized redirect URIs (this goes through the Vite proxy)
 7. Download the JSON file and save it as `client_secret.json` in the project root
 
 ### 3. OpenAI API Setup
@@ -97,7 +97,7 @@ FLASK_ENV=development
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_SECRETS=client_secret.json
-GOOGLE_REDIRECT_URI=http://127.0.0.1:5001/oauth2callback
+GOOGLE_REDIRECT_URI=http://localhost:5173/oauth2callback
 
 # Task Provider Configuration
 DEFAULT_TASK_PROVIDER=google_tasks
@@ -157,7 +157,7 @@ The application will:
 | `FLASK_SECRET` | Flask session secret key | `dev-change-me` |
 | `FLASK_ENV` | Flask environment (development/production) | `development` |
 | `GOOGLE_CLIENT_SECRETS` | Path to Google OAuth credentials | `client_secret.json` |
-| `GOOGLE_REDIRECT_URI` | OAuth callback URL | `http://127.0.0.1:5001/oauth2callback` |
+| `GOOGLE_REDIRECT_URI` | OAuth callback URL | `http://localhost:5001/oauth2callback` |
 | `DEFAULT_TASK_PROVIDER` | Default task provider | `google_tasks` |
 | `TASKS_LIST_TITLE` | Title for the Google Tasks list | `Email Tasks` |
 | `FETCH_LIMIT` | Maximum emails to process | `10` |

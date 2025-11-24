@@ -4,6 +4,7 @@ import sys
 import logging
 from pathlib import Path
 from flask import Flask, request
+from flask_cors import CORS
 
 # Add project root to Python path to enable server.* imports
 project_root = Path(__file__).parent.parent
@@ -12,7 +13,7 @@ if str(project_root) not in sys.path:
 
 from server.config import FLASK_SECRET
 from server.db import init_db
-from server.routers import auth, tasks, calendar, emails
+from server.routers import auth, tasks, calendar, emails, settings
 
 # Configure logging
 logging.basicConfig(
@@ -29,11 +30,15 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = os.getenv('FLASK_ENV') == 'production'
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 
+# Enable CORS for all routes
+CORS(app, supports_credentials=True, origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'https://taskflow-82031.web.app'])
+
 # Register blueprints
 app.register_blueprint(auth.auth_bp)
 app.register_blueprint(tasks.tasks_bp)
 app.register_blueprint(calendar.calendar_bp)
 app.register_blueprint(emails.emails_bp)
+app.register_blueprint(settings.settings_bp)
 
 # Ensure DB tables exist at startup
 logger.info("Initializing database...")
@@ -59,6 +64,6 @@ def index():
 if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     port = int(os.getenv("PORT", 5001))
-    logger.info(f"Starting Flask server on 127.0.0.1:{port}")
+    logger.info(f"Starting Flask server on localhost:{port}")
     logger.info(f"Debug mode: True")
-    app.run("127.0.0.1", port, debug=True)
+    app.run("localhost", port, debug=True)

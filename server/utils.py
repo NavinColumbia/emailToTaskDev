@@ -7,6 +7,7 @@ from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
 from dateutil import parser as dateutil_parser
+from sqlalchemy import select
 from server.db import db_session, User
 import logging
 
@@ -45,7 +46,8 @@ def get_calendar_service():
 
 def get_or_create_user(session, email: str) -> User:
     """Get or create a user by email address."""
-    user = session.query(User).filter_by(email=email).one_or_none()
+    stmt = select(User).where(User.email == email)
+    user = session.execute(stmt).scalar_one_or_none()
     if user:
         return user
     user = User(
@@ -77,7 +79,10 @@ def get_current_user() -> User | None:
     
     user_email = session["user_email"]
     with db_session() as s:
-        return get_or_create_user(s, user_email)
+        user = get_or_create_user(s, user_email)
+        _ = user.id
+        s.expunge(user)
+        return user
 
 def get_header(payload: dict, name: str) -> str | None:
     for header in payload.get("headers", []):

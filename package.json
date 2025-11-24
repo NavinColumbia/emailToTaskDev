@@ -1,7 +1,7 @@
 {
     "scripts": {
         "deps": "cd client && npm install && cd ../ && cd server && pip install -r requirements.txt",
-        "dev": "concurrently \"cd client && npm run dev\" \"cd server && python3 app.py\"",
+        "dev": "concurrently \"cd client &&  VITE_API_BASE_URL=http://localhost:5001 npm run dev\" \"cd server && python3 app.py\"",
         "git": "git add . && git commit -m 'update' && git push",
         "deploy:client": "cd client && VITE_API_BASE_URL=https://taskflow-server-367122183369.us-central1.run.app npm run build && cd ../ && firebase deploy",
         "deploy:server": "gcloud builds submit --config cloudbuild.yaml --substitutions=_FRONTEND_URL=https://taskflow-82031.web.app",

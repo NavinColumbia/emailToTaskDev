@@ -29,6 +29,7 @@ class User(Base):
     emails: Mapped[list["Email"]] = relationship("Email", back_populates="user")
     tasks: Mapped[list["Task"]] = relationship("Task", back_populates="user")
     calendar_events: Mapped[list["CalendarEvent"]] = relationship("CalendarEvent", back_populates="user")
+    settings: Mapped["UserSettings | None"] = relationship("UserSettings", back_populates="user", uselist=False, cascade="all, delete-orphan")
 
 class Email(Base):
     __tablename__ = "emails"
@@ -85,6 +86,20 @@ class CalendarEvent(Base):
     # Relationships
     user: Mapped["User"] = relationship("User", back_populates="calendar_events")
     email: Mapped["Email"] = relationship("Email")
+
+class UserSettings(Base):
+    __tablename__ = "user_settings"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(BigInteger, ForeignKey("users.id"), nullable=False, unique=True, index=True)
+    provider: Mapped[str] = mapped_column(Text, nullable=False, default="google_tasks")
+    max: Mapped[int | None] = mapped_column(Integer)
+    window: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    dry_run: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False, onupdate=lambda: datetime.now(timezone.utc))
+    
+    # Relationship
+    user: Mapped["User"] = relationship("User", back_populates="settings")
 
 def init_db():
     import logging

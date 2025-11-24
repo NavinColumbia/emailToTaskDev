@@ -34,23 +34,7 @@ export default function ProcessEmailsForm({
 }: ProcessEmailsFormProps) {
   return (
     <Box component="form" onSubmit={onSubmit}>
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3, alignItems: 'center' }}>
-        <TextField
-          select
-          label="Task Provider"
-          value={formData.provider}
-          onChange={(e) => onFormDataChange({ ...formData, provider: e.target.value })}
-          sx={{ 
-            minWidth: 180,
-            '& .MuiInputBase-input': {
-              height: '56px',
-              boxSizing: 'border-box'
-            }
-          }}
-        >
-          <MenuItem value="google_tasks">Google Tasks</MenuItem>
-        </TextField>
-
+      <Box sx={{ display: 'flex', gap: 2, mb: 3, alignItems: 'center', width: '100%' }}>
         <TextField
           type="number"
           label="Max Emails"
@@ -59,7 +43,7 @@ export default function ProcessEmailsForm({
           placeholder="All"
           slotProps={{ htmlInput: { min: 1 } }}
           sx={{ 
-            minWidth: 150,
+            flex: 1,
             '& .MuiInputBase-input': {
               height: '56px',
               boxSizing: 'border-box'
@@ -73,7 +57,7 @@ export default function ProcessEmailsForm({
           value={formData.window}
           onChange={(e) => onFormDataChange({ ...formData, window: e.target.value })}
           sx={{ 
-            minWidth: 180,
+            flex: 1,
             '& .MuiInputBase-input': {
               height: '56px',
               boxSizing: 'border-box'
@@ -92,7 +76,7 @@ export default function ProcessEmailsForm({
           value={formData.dry_run ? 'true' : 'false'}
           onChange={(e) => onFormDataChange({ ...formData, dry_run: e.target.value === 'true' })}
           sx={{ 
-            minWidth: 120,
+            flex: 1,
             '& .MuiInputBase-input': {
               height: '56px',
               boxSizing: 'border-box'
@@ -113,7 +97,7 @@ export default function ProcessEmailsForm({
           </Typography>
         </AccordionSummary>
         <AccordionDetails sx={{ pt: 0, pb: 2 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%' }}>
             <TextField
               type="number"
               label="Since (hours ago)"
@@ -121,6 +105,7 @@ export default function ProcessEmailsForm({
               onChange={(e) => onFormDataChange({ ...formData, since_hours: e.target.value ? Number(e.target.value) : undefined })}
               placeholder="e.g., 24"
               helperText="Precise time filter (overrides time window)"
+              fullWidth
               sx={{
                 '& .MuiInputBase-input': {
                   height: '56px',
@@ -135,6 +120,7 @@ export default function ProcessEmailsForm({
               onChange={(e) => onFormDataChange({ ...formData, since: e.target.value })}
               placeholder="e.g., 2025-10-27T12:00:00Z"
               helperText="Overrides hours if both provided"
+              fullWidth
               sx={{
                 '& .MuiInputBase-input': {
                   height: '56px',
@@ -149,6 +135,7 @@ export default function ProcessEmailsForm({
               onChange={(e) => onFormDataChange({ ...formData, q: e.target.value })}
               placeholder="e.g., from:boss@example.com has:attachment"
               helperText="Advanced Gmail search query (overrides other filters)"
+              fullWidth
               sx={{
                 '& .MuiInputBase-input': {
                   height: '56px',
@@ -160,7 +147,7 @@ export default function ProcessEmailsForm({
         </AccordionDetails>
       </Accordion>
 
-      <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+      <Box sx={{ mt: 3, display: 'flex', gap: 2, width: '100%' }}>
         <Button
           type="submit"
           variant="contained"

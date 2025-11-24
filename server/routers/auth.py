@@ -80,9 +80,8 @@ def oauth2callback():
         except Exception as e:
             logger.warning(f"Could not fetch user email during OAuth: {e}")
         logger.info("OAuth authentication successful, credentials stored in session")
-        frontend_url = FRONTEND_URL
-        if request.host.startswith("127.0.0.1"):
-            frontend_url = frontend_url.replace("localhost", "127.0.0.1")
+        frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL)
+        logger.info(f"FRONTEND_URL env var: {os.getenv('FRONTEND_URL')}, config default: {FRONTEND_URL}, using: {frontend_url}")
         logger.info(f"Redirecting to frontend: {frontend_url}")
         return redirect(f"{frontend_url}/")
     except Exception as e:

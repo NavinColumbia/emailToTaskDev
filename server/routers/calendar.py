@@ -1,6 +1,7 @@
 from flask import Blueprint, session, jsonify
 from server.utils import get_current_user
 from server.db import db_session, CalendarEvent, Email
+from sqlalchemy import select
 import logging
 
 logger = logging.getLogger(__name__)
@@ -18,19 +19,22 @@ def api_all_calendar_events():
     if not user:
         return jsonify({"error": "Could not determine user"}), 401
 
+    user_id = user.id
+
     try:
         with db_session() as s:
-            rows = (
-                s.query(CalendarEvent, Email)
+            stmt = (
+                select(CalendarEvent, Email)
                 .join(Email, Email.id == CalendarEvent.email_id)
-                .filter(CalendarEvent.user_id == user.id)
-                .filter(Email.user_id == user.id)
+                .where(CalendarEvent.user_id == user_id)
+                .where(Email.user_id == user_id)
                 .order_by(CalendarEvent.created_at.desc())
                 .limit(200)
-                .all()
             )
+            rows = s.execute(stmt).all()
             items = []
-            for ce, e in rows:
+            for row in rows:
+                ce, e = row
                 items.append({
                     "google_event_id": ce.google_event_id,
                     "summary": ce.summary or "Meeting",
