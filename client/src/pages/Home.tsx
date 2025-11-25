@@ -1,7 +1,5 @@
 import { Box, Button, Typography } from '@mui/material';
-import { Google as GoogleIcon } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
-import { api } from '../apis/api';
 import { notionColors } from '../theme';
 import productivityImage from '../assets/image.svg';
 
@@ -43,26 +41,12 @@ export default function Home({ authenticated }: HomeProps) {
             variant="body1" 
             sx={{ 
               fontSize: '18px',
-              mb: 4,
               lineHeight: 1.6,
               color: notionColors.text.secondary,
             }}
           >
             Convert Gmail emails to tasks automatically using AI-powered classification
           </Typography>
-          <Button
-            onClick={() => api.authorize()}
-            variant="contained"
-            startIcon={<GoogleIcon />}
-            sx={{ 
-              fontSize: '15px',
-              px: 4,
-              py: 1.5,
-              borderRadius: '8px',
-            }}
-          >
-            Connect with Google
-          </Button>
         </Box>
       </Box>
     );

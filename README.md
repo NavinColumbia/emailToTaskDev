@@ -97,7 +97,7 @@ FLASK_ENV=development
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_SECRETS=client_secret.json
-GOOGLE_REDIRECT_URI=http://localhost:5173/oauth2callback
+GOOGLE_REDIRECT_URI=http://localhost:5001/oauth2callback
 
 # Task Provider Configuration
 DEFAULT_TASK_PROVIDER=google_tasks

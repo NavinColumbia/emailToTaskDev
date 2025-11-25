@@ -18,8 +18,8 @@ export const notionColors = {
   },
   // Background colors
   background: {
-    default: '#F5F7FA',
-    paper: '#F0F2F5',
+    default: '#FFFFFF',
+    paper: '#FFFFFF',
     hover: 'rgba(48, 168, 255, 0.06)',
     hoverLight: 'rgba(48, 168, 255, 0.03)',
     button: '#30A8FF',

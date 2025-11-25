@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
-import { Email as EmailIcon, Settings as SettingsIcon, AutoAwesome as ConverterIcon} from '@mui/icons-material';
+import { Email as EmailIcon, Settings as SettingsIcon, AutoAwesome as ConverterIcon, Google as GoogleIcon } from '@mui/icons-material';
 import { api } from '../apis/api';
 import { notionColors } from '../theme';
 
@@ -57,7 +57,7 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
         </Box>
         <Box sx={{ flexGrow: 1 }} />
         <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {authenticated && (
+          {authenticated ? (
             <>
               <Button
                 component={Link}
@@ -91,11 +91,25 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
               </Button>
               <Button
                 onClick={handleLogout}
-              variant="text"
+                variant="text"
               >
                 Logout
               </Button>
             </>
+          ) : (
+            <Button
+              onClick={() => api.authorize()}
+              variant="contained"
+              startIcon={<GoogleIcon />}
+              sx={{ 
+                fontSize: '15px',
+                px: 3,
+                py: 1,
+                borderRadius: '8px',
+              }}
+            >
+              Google Login
+            </Button>
           )}
         </Box>
       </Toolbar>

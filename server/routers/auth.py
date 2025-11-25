@@ -2,7 +2,7 @@ from flask import Blueprint, session, jsonify, redirect, request
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 from server.config import CLIENT_SECRETS_FILE, REDIRECT_URI, FRONTEND_URL
-from server.utils import SCOPES, get_or_create_user, get_gmail_service
+from server.utils import SCOPES, get_or_create_user
 from server.db import db_session
 import os
 

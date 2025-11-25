@@ -80,9 +80,24 @@ export default function TimeWindow({
         disabled={disabled}
         sx={{
           flex: fullWidth ? undefined : 1,
-          '& .MuiInputBase-input': {
-            height: '60px',
-            boxSizing: 'border-box'
+          '& .MuiOutlinedInput-root': {
+            backgroundColor: '#FFFFFF',
+            padding: '0px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            '& .MuiInputBase-input': {
+              height: '53px',
+              padding: '0px',
+              boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'center',
+            },
+            '& .MuiSelect-select': {
+              display: 'flex',
+              alignItems: 'center',
+              height: '53px',
+              padding: '0px',
+            },
           },
           ...sx,
         }}

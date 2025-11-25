@@ -113,6 +113,26 @@ export default function Converter({ authenticated }: ConverterProps) {
       ),
     },
     {
+      header: 'Status',
+      render: (task) => (
+        <Chip 
+          label={task.status === 'created' ? 'Created' : 'Skipped'} 
+          size="small"
+          sx={{ 
+            backgroundColor: task.status === 'created' ? notionColors.chip.success : notionColors.error.background,
+            color: task.status === 'created' ? notionColors.chip.successText : notionColors.error.text,
+            maxWidth: '100%',
+            fontWeight: 500,
+            '& .MuiChip-label': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }
+          }} 
+        />
+      ),
+    },
+    {
       header: 'Sender',
       render: (task) => (
         <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
@@ -129,26 +149,6 @@ export default function Converter({ authenticated }: ConverterProps) {
           sx={{ 
             backgroundColor: notionColors.chip.default,
             color: notionColors.primary.main,
-            maxWidth: '100%',
-            fontWeight: 500,
-            '& .MuiChip-label': {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }
-          }} 
-        />
-      ),
-    },
-    {
-      header: 'Status',
-      render: (task) => (
-        <Chip 
-          label={task.status === 'created' ? 'Created' : 'Skipped'} 
-          size="small"
-          sx={{ 
-            backgroundColor: task.status === 'created' ? notionColors.chip.success : notionColors.error.background,
-            color: task.status === 'created' ? notionColors.chip.successText : notionColors.error.text,
             maxWidth: '100%',
             fontWeight: 500,
             '& .MuiChip-label': {
@@ -180,6 +180,26 @@ export default function Converter({ authenticated }: ConverterProps) {
             {event.summary || 'Meeting'}
           </Typography>
         </Box>
+      ),
+    },
+    {
+      header: 'Status',
+      render: (event) => (
+        <Chip 
+          label={event.status === 'created' ? 'Created' : 'Skipped'} 
+          size="small"
+          sx={{ 
+            backgroundColor: event.status === 'created' ? notionColors.chip.success : notionColors.error.background,
+            color: event.status === 'created' ? notionColors.chip.successText : notionColors.error.text,
+            maxWidth: '100%',
+            fontWeight: 500,
+            '& .MuiChip-label': {
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }
+          }} 
+        />
       ),
     },
     {
@@ -220,26 +240,6 @@ export default function Converter({ authenticated }: ConverterProps) {
         <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
           {event.email_sender || 'Unknown'}
         </Typography>
-      ),
-    },
-    {
-      header: 'Status',
-      render: (event) => (
-        <Chip 
-          label={event.status === 'created' ? 'Created' : 'Skipped'} 
-          size="small"
-          sx={{ 
-            backgroundColor: event.status === 'created' ? notionColors.chip.success : notionColors.error.background,
-            color: event.status === 'created' ? notionColors.chip.successText : notionColors.error.text,
-            maxWidth: '100%',
-            fontWeight: 500,
-            '& .MuiChip-label': {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }
-          }} 
-        />
       ),
     },
   ], []);
