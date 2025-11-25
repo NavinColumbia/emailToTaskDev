@@ -82,7 +82,10 @@ def oauth2callback():
         session.modified = True
         frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL)
         logger.info(f"Redirecting to frontend: {frontend_url}")
-        return redirect(f"{frontend_url}/")
+        logger.info(f"Session after auth - has credentials: {'credentials' in session}, has user_email: {'user_email' in session}")
+        response = redirect(f"{frontend_url}/")
+        logger.info(f"Response headers - Set-Cookie present: {'Set-Cookie' in str(response.headers)}")
+        return response
     except Exception as e:
         raise
 
