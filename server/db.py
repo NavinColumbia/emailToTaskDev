@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, Integer
 from sqlalchemy.orm import registry, mapped_column, Mapped, Session, sessionmaker, relationship
 from sqlalchemy import JSON, BigInteger, Text, Boolean, TIMESTAMP
+from sqlalchemy.exc import OperationalError
 from pathlib import Path
 
 # Use /tmp for Cloud Run (ephemeral) or allow override via env var
@@ -111,8 +112,8 @@ def init_db():
     
     try:
         Base.metadata.create_all(engine, checkfirst=True)
-    except Exception as e:
-        raise
+    except OperationalError:
+        pass
 
 @contextmanager
 def db_session() -> Session:

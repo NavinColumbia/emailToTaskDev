@@ -5,12 +5,16 @@ from server.config import CLIENT_SECRETS_FILE, REDIRECT_URI, FRONTEND_URL
 from server.utils import SCOPES, get_or_create_user
 from server.db import db_session
 import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route("/auth/status")
 def auth_status():
     is_authenticated = "credentials" in session
+    logger.info(f"Auth status check: authenticated={is_authenticated}, session_id={session.get('_id', 'none')}")
     return jsonify({"authenticated": is_authenticated})
 
 @auth_bp.route("/user")
@@ -45,7 +49,14 @@ def oauth2callback():
             scopes=SCOPES,
             redirect_uri=REDIRECT_URI,
         )
-        flow.fetch_token(authorization_response=request.url)
+        if os.getenv('FLASK_ENV') == 'production':
+            auth_response_url = REDIRECT_URI
+            if request.query_string:
+                auth_response_url += '?' + request.query_string.decode('utf-8')
+        else:
+            auth_response_url = request.url
+            os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+        flow.fetch_token(authorization_response=auth_response_url)
         credentials = flow.credentials
         session["credentials"] = {
             "token": credentials.token,
@@ -64,9 +75,13 @@ def oauth2callback():
                 session["user_email"] = user_email
                 with db_session() as s:
                     get_or_create_user(s, user_email)
+                logger.info(f"User authenticated: {user_email}")
         except Exception as e:
-            pass
+            logger.error(f"Error getting user profile: {e}")
+        # Mark session as modified to ensure it's saved
+        session.modified = True
         frontend_url = os.getenv("FRONTEND_URL", FRONTEND_URL)
+        logger.info(f"Redirecting to frontend: {frontend_url}")
         return redirect(f"{frontend_url}/")
     except Exception as e:
         raise
