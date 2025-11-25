@@ -25,7 +25,9 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'FLASK_ENV=production,DB_DIR=/tmp,FRONTEND_URL=${_FRONTEND_URL},RECREATE_DB=${_RECREATE_DB}'
+      - 'FLASK_ENV=production,DB_DIR=/tmp,FRONTEND_URL=${_FRONTEND_URL},RECREATE_DB=${_RECREATE_DB},GOOGLE_REDIRECT_URI=${_SERVER_URL}/oauth2callback'
+      - '--set-secrets'
+      - 'FLASK_SECRET=FLASK_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest'
       - '--memory'
       - '512Mi'
       - '--timeout'
@@ -38,5 +40,6 @@ substitutions:
   _REGION: 'us-central1'
   _REPOSITORY: 'taskflow'
   _FRONTEND_URL: 'https://taskflow-82031.web.app'
+  _SERVER_URL: 'https://taskflow-server-367122183369.us-central1.run.app'
   _RECREATE_DB: 'false'
 

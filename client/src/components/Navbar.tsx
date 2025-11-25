@@ -100,12 +100,13 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
             <Button
               onClick={() => api.authorize()}
               variant="contained"
-              startIcon={<GoogleIcon />}
+              startIcon={<GoogleIcon sx={{ fontSize: 18 }} />}
               sx={{ 
-                fontSize: '15px',
-                px: 3,
-                py: 1,
+                fontSize: '14px',
+                px: 2,
+                py: 0.75,
                 borderRadius: '8px',
+                minWidth: 'auto',
               }}
             >
               Google Login
