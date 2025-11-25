@@ -1,17 +1,18 @@
 # 📧 Taskflow
 
-A powerful Flask application that automatically converts Gmail emails into tasks using Todoist. Simply forward emails to a specific Gmail label, and they'll be transformed into organized tasks with all the relevant information.
+A powerful Flask application that automatically converts Gmail emails into tasks using Google Tasks. Uses AI-powered classification to intelligently decide which emails should become tasks and automatically creates calendar events for meetings.
 
 ## ✨ Features
 
 - **🔐 Secure Gmail Integration**: OAuth2 authentication with Google
-- **⚡ Automatic Task Creation**: Convert emails to Todoist tasks instantly
+- **⚡ Automatic Task Creation**: Convert emails to Google Tasks instantly
+- **📅 Calendar Event Creation**: Automatically creates Google Calendar events for meeting invitations
 - **🤖 AI-Powered Classification**: Machine learning to decide which emails should become tasks
 - **✨ Smart Task Generation**: AI-generated task titles and descriptions from email content
 - **🎯 Smart Email Processing**: Extract subject, sender, and body content (handles HTML emails)
-- **📊 Flexible Search**: Process emails by label, time window, or custom queries
+- **📊 Flexible Search**: Process emails by time window, custom queries, or date ranges
 - **🎨 Modern UI**: Clean, responsive interface inspired by Notion
-- **⚙️ Configurable Settings**: Customize task provider, labels, and processing limits
+- **👤 Multi-User Support**: User-specific data isolation with SQLite database
 - **📱 Mobile Friendly**: Works seamlessly on all devices
 
 ## 🚀 Quick Start
@@ -20,9 +21,9 @@ A powerful Flask application that automatically converts Gmail emails into tasks
 
 - Python 3.8 or higher
 - pip3
-- Google account with Gmail access
-- Todoist account with API access
+- Google account with Gmail, Google Tasks, and Google Calendar access
 - OpenAI API key (for AI-powered classification and task generation)
+- Node.js and npm (for frontend development)
 
 ### Installation
 
@@ -41,16 +42,20 @@ A powerful Flask application that automatically converts Gmail emails into tasks
    The setup script will:
    - Install all Python dependencies
    - Guide you through Google OAuth setup
-   - Configure your Todoist API token
    - Create environment variables
 
 3. **Start the application**
    ```bash
-   python3 app.py
+   python3 server/app.py
+   ```
+   
+   Or use npm scripts:
+   ```bash
+   npm run dev  # Runs both frontend and backend
    ```
 
 4. **Open your browser**
-   Navigate to `http://127.0.0.1:5000`
+   Navigate to `http://localhost:5001`
 
 ## 🔧 Manual Setup
 
@@ -59,25 +64,25 @@ If you prefer manual setup or the script doesn't work:
 ### 1. Install Dependencies
 
 ```bash
+cd server
 pip3 install -r requirements.txt
+cd ..
 ```
 
 ### 2. Google OAuth Setup
 
 1. Go to [Google Cloud Console](https://console.developers.google.com/)
 2. Create a new project or select an existing one
-3. Enable the Gmail API
+3. Enable the following APIs:
+   - Gmail API
+   - Google Tasks API
+   - Google Calendar API
 4. Go to "Credentials" and create OAuth 2.0 Client ID
 5. Set application type to "Web application"
-6. Add `http://127.0.0.1:5000/oauth2callback` to authorized redirect URIs
-7. Download the JSON file and save it as `client_secret.json`
+6. Add `http://localhost:5173/oauth2callback` to authorized redirect URIs (this goes through the Vite proxy)
+7. Download the JSON file and save it as `client_secret.json` in the project root
 
-### 3. Todoist API Setup
-
-1. Go to [Todoist Integrations](https://todoist.com/prefs/integrations)
-2. Copy your API token
-
-### 4. OpenAI API Setup
+### 3. OpenAI API Setup
 
 1. Go to [OpenAI Platform](https://platform.openai.com/api-keys)
 2. Create a new API key
@@ -90,26 +95,23 @@ Create a `.env` file:
 ```env
 # Flask Configuration
 FLASK_SECRET=your-secret-key-here
+FLASK_ENV=development
 
 # Google OAuth Configuration
 GOOGLE_CLIENT_SECRETS=client_secret.json
-GOOGLE_REDIRECT_URI=http://127.0.0.1:5000/oauth2callback
-
-# Gmail Configuration
-GMAIL_FORWARD_LABEL=todoist-forward
-PROCESSED_STORE=processed.json
+GOOGLE_REDIRECT_URI=http://localhost:5001/oauth2callback
 
 # Task Provider Configuration
-DEFAULT_TASK_PROVIDER=todoist
-TODOIST_API_TOKEN=your-todoist-api-token
+DEFAULT_TASK_PROVIDER=google_tasks
+TASKS_LIST_TITLE=Email Tasks
 
 # OpenAI Configuration for ML Classification
 OPENAI_API_KEY=sk-your-openai-api-key-here
 OPENAI_MODEL=gpt-4o-mini
 
 # Application Configuration
-FETCH_LIMIT=10
-PORT=5000
+PORT=5001
+FRONTEND_URL=http://localhost:5173
 ```
 
 ## 📖 How to Use
@@ -120,28 +122,40 @@ PORT=5000
 2. Click "Connect with Google"
 3. Authorize the application to access your Gmail
 
-### 2. Set Up Email Forwarding
+### 2. Configure Settings (Optional)
 
-1. In Gmail, create a filter or label called `todoist-forward`
-2. Forward emails you want to convert to tasks to this label
-3. Alternatively, use the application's search functionality
+1. Go to the "Settings" tab
+2. Configure default preferences:
+   - **Default Max Emails**: Set default maximum emails to process (default: 10)
+   - **Default Time Window**: Set default time window for email search (default: Last 24 hours)
+3. Click "Save Settings" to save your preferences
 
 ### 3. Process Emails
 
-1. Go to the "Fetch Emails" page
+1. Go to the "Process Emails" tab
 2. Configure your search parameters:
-   - **Task Provider**: Choose Todoist (currently the only option)
-   - **Gmail Label**: Specify which label to process
-   - **Max Emails**: Set how many emails to process at once
-   - **Time Window**: Filter emails by date range
-3. Click "Fetch Emails" to process
+   - **Task Provider**: Choose Google Tasks (default)
+   - **Max Emails**: Set how many emails to process at once (defaults to your saved setting or 10)
+   - **Time Window**: Filter emails by date range (defaults to Last 24 hours, or choose 7 days, 30 days, or all)
+   - **Custom Query**: Use Gmail search syntax for advanced filtering (optional)
+   - **Since Hours**: Filter emails from the last N hours (e.g., "24h", "1.5h", "90m")
+   - **Since Date**: Filter emails from a specific ISO date (e.g., "2025-01-15T00:00:00Z")
+   - **Dry Run**: Test without actually creating tasks
+3. Click "Process Emails" to start processing
 
 ### 4. View Results
 
 The application will:
 - Show you the Gmail query used
-- Display how many tasks were created
-- List all created tasks with their details
+- Display how many tasks and calendar events were created
+- List all newly created tasks with links to Google Tasks
+- List all newly created calendar events with links to Google Calendar
+- Show statistics (total found, already processed, considered)
+
+### 5. View All Tasks and Events
+
+- **Tasks Tab**: View all tasks created from emails, sorted by creation date
+- **Calendar Tab**: View all calendar events created from emails, sorted by creation date
 
 ## ⚙️ Configuration Options
 
@@ -150,16 +164,64 @@ The application will:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `FLASK_SECRET` | Flask session secret key | `dev-change-me` |
+| `FLASK_ENV` | Flask environment (development/production) | `development` |
 | `GOOGLE_CLIENT_SECRETS` | Path to Google OAuth credentials | `client_secret.json` |
-| `GOOGLE_REDIRECT_URI` | OAuth callback URL | `http://127.0.0.1:5000/oauth2callback` |
-| `GMAIL_FORWARD_LABEL` | Gmail label to process | `todoist-forward` |
-| `PROCESSED_STORE` | File to track processed emails | `processed.json` |
-| `DEFAULT_TASK_PROVIDER` | Default task provider | `todoist` |
-| `TODOIST_API_TOKEN` | Todoist API token | Required |
-| `FETCH_LIMIT` | Maximum emails to process | `10` |
-| `PORT` | Application port | `5000` |
+| `GOOGLE_REDIRECT_URI` | OAuth callback URL | `http://localhost:5001/oauth2callback` |
+| `DEFAULT_TASK_PROVIDER` | Default task provider | `google_tasks` |
+| `TASKS_LIST_TITLE` | Title for the Google Tasks list | `Email Tasks` |
+| `PORT` | Application port | `5001` |
+| `FRONTEND_URL` | Frontend URL for OAuth redirects | `http://localhost:5173` |
 | `OPENAI_API_KEY` | OpenAI API key for ML features | Required |
 | `OPENAI_MODEL` | OpenAI model to use | `gpt-4o-mini` |
+| `DB_DIR` | Directory for SQLite database | `/tmp` (Cloud Run) or local |
+| `RECREATE_DB` | Recreate database on startup | `false` |
+
+**Note:** `FETCH_LIMIT` is defined in the code but not currently used. The maximum number of emails to process is controlled by user settings (default: 10) or the `max` parameter in API requests.
+
+### Default Settings
+
+When a user first accesses the application, default settings are applied:
+- **Default Max Emails**: 10
+- **Default Time Window**: Last 24 hours (1d)
+
+These can be customized in the Settings page.
+
+## 🚀 Production Deployment
+
+### Google Cloud Run Deployment
+
+The application is configured for deployment to Google Cloud Run:
+
+1. **Prerequisites**:
+   - Google Cloud Project with billing enabled
+   - `gcloud` CLI installed and authenticated
+   - Firebase CLI installed (for frontend deployment)
+   - Secret Manager API enabled
+
+2. **Set up Secrets**:
+   ```bash
+   # Create secrets from your .env file
+   # Note: You'll need to create a script to extract FLASK_SECRET and OPENAI_API_KEY
+   # and store them in Google Cloud Secret Manager
+   ```
+
+3. **Configure OAuth Redirect URI**:
+   - Add your production redirect URI to Google Cloud Console OAuth credentials:
+     `https://your-cloud-run-url/oauth2callback`
+
+4. **Deploy**:
+   ```bash
+   # Deploy frontend and backend
+   npm run deploy
+   
+   # Or deploy separately
+   npm run deploy:client 
+   npm run deploy:server
+   ```
+
+5. **Environment Variables**:
+   - Secrets (`FLASK_SECRET`, `OPENAI_API_KEY`) are managed via Google Cloud Secret Manager
+   - Other environment variables are set in `cloudbuild.yaml`
 
 ## 🤖 AI Classification Features
 
@@ -169,12 +231,18 @@ The application uses OpenAI's GPT models to intelligently process emails:
 The AI automatically determines whether an email should become a task based on:
 - **Action items or requests** → Creates task
 - **Reminders or deadlines** → Creates task
-- **Meeting invitations** → Creates task
+- **Meeting invitations** → Creates task + calendar event
 - **Bills or payments** → Creates task
 - **Pure newsletters** → Skips
 - **Marketing content** → Skips
 - **Social media notifications** → Skips
 - **FYI-only messages** → Skips
+
+### Meeting Detection
+The AI automatically detects meeting invitations and:
+- Creates a Google Calendar event with the meeting details
+- Extracts meeting time, location, and participants
+- Links the calendar event to the original email
 
 ### Task Generation
 For emails classified as tasks, the AI:
