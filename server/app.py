@@ -14,7 +14,7 @@ if str(project_root) not in sys.path:
 
 from server.config import FLASK_SECRET
 from server.db import init_db
-from server.routers import auth, tasks, calendar, emails, settings
+from server.routers import auth, tasks, calendar, emails, settings, categories
 
 # Configure logging
 log_dir = Path(project_root) / "logs"
@@ -56,6 +56,7 @@ app.register_blueprint(tasks.tasks_bp)
 app.register_blueprint(calendar.calendar_bp)
 app.register_blueprint(emails.emails_bp)
 app.register_blueprint(settings.settings_bp)
+app.register_blueprint(categories.categories_bp)
 
 # Ensure DB tables exist at startup
 logger.info("Initializing database...")
