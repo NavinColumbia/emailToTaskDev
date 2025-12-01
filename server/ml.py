@@ -12,7 +12,7 @@ import os
 import json
 import re
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Union
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -75,12 +75,49 @@ def prepare_email_content(payload: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
+def normalize_categories(raw: list[str] | list[dict] | None) -> list[dict[str, str]]:
+    """
+    Normalize category input to a consistent format.
+    
+    Args:
+        raw: Either a list of strings or a list of dicts with keys like
+             name, label, and optional description
+    
+    Returns:
+        A list of dicts with normalized shape: [{"name": str, "description": str}, ...]
+        Ignores empty names, and defaults description to "" if missing.
+    """
+    if not raw:
+        return []
+    
+    normalized = []
+    for item in raw:
+        if isinstance(item, str):
+            # Simple string category
+            if item.strip():
+                normalized.append({"name": item.strip(), "description": ""})
+        elif isinstance(item, dict):
+            # Rich category object
+            # Try 'name' first, then 'label' as fallback
+            name = item.get("name") or item.get("label") or ""
+            if name and isinstance(name, str) and name.strip():
+                description = item.get("description", "")
+                if not isinstance(description, str):
+                    description = ""
+                normalized.append({
+                    "name": name.strip(),
+                    "description": description.strip() if description else ""
+                })
+    
+    return normalized
+
+
 def classify_and_generate_task(
     payload: Dict[str, Any],
     api_key: Optional[str] = None,
     model: str = "gpt-4o-mini",
-    task_categories: list[str] | None = None,
-    calendar_categories: list[str] | None = None,
+    task_categories: list[str] | list[dict] | None = None,
+    calendar_categories: list[str] | list[dict] | None = None,
 ) -> Dict[str, Any]:
     """
     Main function to classify email and generate task details and meetings.
@@ -137,15 +174,44 @@ def classify_and_generate_task(
     sender = payload.get("sender", "Unknown")
     subject = email_content.get("subject", "(No subject)")
     
-    task_cats_str = ", ".join(f"'{c}'" for c in (task_categories or []))
-    cal_cats_str = ", ".join(f"'{c}'" for c in (calendar_categories or []))
+    # Normalize categories to consistent format
+    normalized_task_cats = normalize_categories(task_categories)
+    normalized_cal_cats = normalize_categories(calendar_categories)
+    
+    # Log normalized categories for debugging
+    logger.debug(
+        f"Normalized task categories: {len(normalized_task_cats)} categories "
+        f"({sum(1 for c in normalized_task_cats if c['description'])}) with descriptions"
+    )
+    logger.debug(
+        f"Normalized calendar categories: {len(normalized_cal_cats)} categories "
+        f"({sum(1 for c in normalized_cal_cats if c['description'])}) with descriptions"
+    )
+    
+    # Format categories as blocks for prompt
+    if normalized_task_cats:
+        task_categories_block = "Available Task Categories:\n" + "\n".join(
+            f"  - {cat['name']}" + (f": {cat['description']}" if cat['description'] else "")
+            for cat in normalized_task_cats
+        )
+    else:
+        task_categories_block = "Available Task Categories: None"
+    
+    if normalized_cal_cats:
+        calendar_categories_block = "Available Calendar Categories:\n" + "\n".join(
+            f"  - {cat['name']}" + (f": {cat['description']}" if cat['description'] else "")
+            for cat in normalized_cal_cats
+        )
+    else:
+        calendar_categories_block = "Available Calendar Categories: None"
     
     logger.info(f"Processing email for classification - Subject: '{subject}', Sender: '{sender}'")
     prompt = f"""
 You are an intelligent email assistant that helps users manage their tasks and meetings by analyzing emails.
 
-Available Task Categories: [{task_cats_str}]
-Available Calendar Categories: [{cal_cats_str}]
+{task_categories_block}
+
+{calendar_categories_block}
 
 Instructions:
 
@@ -157,7 +223,9 @@ Instructions:
     - Generate a concise task title (3-8 words)
     - Generate detailed task notes (2-4 sentences)
     - Provide a confidence score (0.0-1.0)
-    - Select the most appropriate category from the Available Task Categories list (or null if none fit)
+    - For the "category" field in your response: You MUST select one of the category names from the Available Task Categories list above, or null if none fit.
+      IMPORTANT: Use the exact category name as shown (the text after the "- " and before the colon, if present).
+      Do not include descriptions or any additional text - only the category name itself.
     - Explain your reasoning
 
 
@@ -169,7 +237,9 @@ Instructions:
         * start_datetime: RFC3339 UTC start time (leave empty if unknown)
         * end_datetime: RFC3339 UTC end time (leave empty if unknown)
         * participants: list of email addresses (leave empty list if unknown)
-        * category: Select the most appropriate category from the Available Calendar Categories list (or null if none fit)
+        * category: For the meeting["category"] field in your response: You MUST select one of the category names from the Available Calendar Categories list above, or null if none fit.
+          IMPORTANT: Use the exact category name as shown (the text after the "- " and before the colon, if present).
+          Do not include descriptions or any additional text - only the category name itself.
    - Use context clues like "meeting", "invite", "agenda", "call", "Zoom", "conference", "link"
 
 Email Details:
@@ -204,7 +274,7 @@ Respond ONLY with valid JSON in this exact format:
   "confidence": 0.0-1.0,
   "title": "Concise task title (3-8 words)",
   "notes": "Detailed task description with key information",
-  "category": "Selected task category or null",
+  "category": "Exact category name from Available Task Categories list, or null",
   "reasoning": "Brief explanation of decision",
   "meeting": {{
       "is_meeting": true/false,
@@ -215,9 +285,14 @@ Respond ONLY with valid JSON in this exact format:
       "start_datetime": "",
       "end_datetime": "",
       "participants": [],
-      "category": "Selected calendar category or null"
+      "category": "Exact category name from Available Calendar Categories list, or null"
   }}
 }}
+
+CRITICAL: For both "category" fields:
+- Use the EXACT category name as listed in the Available Categories sections above
+- Do NOT include descriptions, colons, or any additional text
+- Use null if no category fits
 
 For task title:
 - Make it actionable (start with a verb if appropriate)
@@ -315,8 +390,8 @@ For task notes:
 
 def ml_decide(
     payload: Dict[str, Any],
-    task_categories: list[str] | None = None,
-    calendar_categories: list[str] | None = None,
+    task_categories: list[str] | list[dict] | None = None,
+    calendar_categories: list[str] | list[dict] | None = None,
 ) -> Dict[str, Any]:
     """
     Main entry point for email classification.

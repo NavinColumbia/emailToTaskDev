@@ -18,6 +18,10 @@ def api_all_results():
     # Extract user_id before the session closes to avoid detached instance error
     user_id = user.id
 
+    # Get optional query parameters
+    category = request.values.get("category")
+    sort = request.values.get("sort")
+
     try:
         with db_session() as s:
             stmt = (
@@ -25,9 +29,19 @@ def api_all_results():
                 .join(Email, Email.id == Task.email_id)
                 .where(Task.user_id == user_id)
                 .where(Email.user_id == user_id)
-                .order_by(Task.created_at.desc())
-                .limit(200)
             )
+            
+            # Apply category filter if provided
+            if category:
+                stmt = stmt.where(Task.category == category)
+            
+            # Apply sorting
+            if sort == "category":
+                stmt = stmt.order_by(Task.category.asc(), Task.created_at.desc())
+            else:
+                stmt = stmt.order_by(Task.created_at.desc())
+            
+            stmt = stmt.limit(200)
             rows = s.execute(stmt).all()
             items = []
             for row in rows:
@@ -53,6 +67,7 @@ def api_all_results():
                     "task_link": task_link,
                     "task_due": task_due,
                     "status": t.status or "created",
+                    "category": t.category,
                 })
         return jsonify({"tasks": items, "total": len(items)})
     except Exception as e:

@@ -6,7 +6,7 @@ import logging
 from server.utils import get_gmail_service, get_current_user, message_to_payload, require_auth
 from server.config import DEFAULT_PROVIDER, TASKS_LIST_TITLE
 from server.db import db_session, Email, Task, CalendarEvent, UserSettings
-from server.ml import ml_decide
+from server.ml import ml_decide, normalize_categories
 from server.providers.google_tasks import create_task as create_google_task, GoogleTasksError
 from sqlalchemy import select
 
@@ -237,6 +237,10 @@ def fetch_emails():
         logger.warning("Fetch emails failed: Could not determine user")
         return jsonify({"error": "Could not determine user"}), 401
 
+    # Read optional category from JSON body
+    request_data = request.get_json(silent=True) or {}
+    category_from_request = request_data.get("category")
+
     provider = request.values.get("provider", DEFAULT_PROVIDER)
     window = request.values.get("window")  # e.g., 7d
     custom_query = request.values.get("q")
@@ -277,13 +281,17 @@ def fetch_emails():
     already_processed_count = 0
     considered = 0
 
-    # Get auto_generate setting
+    # Get auto_generate setting and categories
     with db_session() as s:
         stmt = select(UserSettings).where(UserSettings.user_id == user.id)
         user_settings = s.execute(stmt).scalar_one_or_none()
         auto_generate = user_settings.auto_generate if user_settings and user_settings.auto_generate is not None else True
-        task_categories = user_settings.task_categories if user_settings else []
-        calendar_categories = user_settings.calendar_categories if user_settings else []
+        # Normalize categories to ensure we pass full {name, description} objects to ml_decide
+        # This handles backward compatibility with old string format in database
+        task_categories_raw = user_settings.task_categories if user_settings else []
+        calendar_categories_raw = user_settings.calendar_categories if user_settings else []
+        task_categories = normalize_categories(task_categories_raw)
+        calendar_categories = normalize_categories(calendar_categories_raw)
 
     logger.info(f"Auto-generate setting: {auto_generate}")
 
@@ -387,7 +395,7 @@ def fetch_emails():
                             html_link=calendar_event.get("htmlLink"),
                             provider_metadata=calendar_event,
                             status="created",
-                            category=meeting_info.get("category"),
+                            category=category_from_request or meeting_info.get("category"),
                         )
                         s.add(cal_event)
                         
@@ -453,7 +461,7 @@ def fetch_emails():
                         html_link=None,
                         provider_metadata=pending_event_metadata,
                         status="pending",
-                        category=meeting_info.get("category"),
+                        category=category_from_request or meeting_info.get("category"),
                     )
                     s.add(cal_event)
                     
@@ -524,7 +532,7 @@ def fetch_emails():
                         provider_task_id=(task.get("id") if isinstance(task, dict) else None),
                         provider_metadata=task if isinstance(task, dict) else None,
                         status="created",
-                        category=ml_result.get("category"),
+                        category=category_from_request or ml_result.get("category"),
                     )
                     s.add(t)
                     
@@ -565,7 +573,7 @@ def fetch_emails():
                     provider_task_id=None,
                     provider_metadata=pending_task_metadata,
                     status="pending",
-                    category=ml_result.get("category"),
+                    category=category_from_request or ml_result.get("category"),
                 )
                 s.add(t)
                 
