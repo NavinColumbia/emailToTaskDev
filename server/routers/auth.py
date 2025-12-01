@@ -1,7 +1,7 @@
 from flask import Blueprint, session, jsonify, redirect, request
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from server.config import CLIENT_SECRETS_FILE, REDIRECT_URI, FRONTEND_URL
+from server.config import CLIENT_SECRETS_CONFIG, REDIRECT_URI, FRONTEND_URL
 from server.utils import SCOPES, get_or_create_user, encode_jwt
 from server.db import db_session
 import os
@@ -10,6 +10,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__)
+
+def _create_flow():
+    """Create OAuth flow from config dict (from environment variable)."""
+    return Flow.from_client_config(
+        CLIENT_SECRETS_CONFIG,
+        scopes=SCOPES,
+        redirect_uri=REDIRECT_URI,
+    )
 
 @auth_bp.route("/auth/status")
 def auth_status():
@@ -40,11 +48,7 @@ def user_info():
 @auth_bp.route("/authorize")
 def authorize():
     try:
-        flow = Flow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
-            scopes=SCOPES,
-            redirect_uri=REDIRECT_URI,
-        )
+        flow = _create_flow()
         
         authorization_url, state = flow.authorization_url(
             access_type="offline",
@@ -59,11 +63,7 @@ def authorize():
 @auth_bp.route("/oauth2callback")
 def oauth2callback():
     try:
-        flow = Flow.from_client_secrets_file(
-            CLIENT_SECRETS_FILE,
-            scopes=SCOPES,
-            redirect_uri=REDIRECT_URI,
-        )
+        flow = _create_flow()
         if os.getenv('FLASK_ENV') == 'production':
             auth_response_url = REDIRECT_URI
             if request.query_string:

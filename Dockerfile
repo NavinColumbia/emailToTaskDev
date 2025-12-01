@@ -13,8 +13,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY server/ ./server/
-COPY .env* ./
-COPY client_secret.json* ./
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1

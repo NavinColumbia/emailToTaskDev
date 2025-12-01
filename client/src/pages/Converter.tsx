@@ -131,36 +131,95 @@ export default function Converter({ authenticated }: ConverterProps) {
   };
 
   // Task table columns
-  const taskColumns: Column<Task>[] = useMemo(() => [
-    {
-      header: 'Title',
-      render: (task) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
-          {task.task_title || task.email_subject || '(no title)'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Status',
-      render: (task) => {
-        const statusLabels: Record<string, string> = {
-          'pending': 'Pending',
-          'created': 'Created',
-          'skipped': 'Skipped',
-        };
-        const statusColors: Record<string, { bg: string; text: string }> = {
-          'pending': { bg: notionColors.warning?.background || '#FFF4E5', text: notionColors.warning?.text || '#B7791F' },
-          'created': { bg: notionColors.chip.success, text: notionColors.chip.successText },
-          'skipped': { bg: notionColors.error.background, text: notionColors.error.text },
-        };
-        const colors = statusColors[task.status] || statusColors['skipped'];
-        return (
+  const taskColumns: Column<Task>[] = useMemo(() => {
+    const hasCategories = settings?.task_categories && settings.task_categories.length > 0;
+    
+    const columns: Column<Task>[] = [
+      {
+        header: 'Title',
+        render: (task) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+            {task.task_title || task.email_subject || '(no title)'}
+          </Typography>
+        ),
+      },
+      {
+        header: 'Status',
+        render: (task) => {
+          const statusLabels: Record<string, string> = {
+            'pending': 'Pending',
+            'created': 'Created',
+            'skipped': 'Skipped',
+          };
+          const statusColors: Record<string, { bg: string; text: string }> = {
+            'pending': { bg: notionColors.warning?.background || '#FFF4E5', text: notionColors.warning?.text || '#B7791F' },
+            'created': { bg: notionColors.chip.success, text: notionColors.chip.successText },
+            'skipped': { bg: notionColors.error.background, text: notionColors.error.text },
+          };
+          const colors = statusColors[task.status] || statusColors['skipped'];
+          return (
+            <Chip 
+              label={statusLabels[task.status] || 'Unknown'} 
+              size="small"
+              sx={{ 
+                backgroundColor: colors.bg,
+                color: colors.text,
+                maxWidth: '100%',
+                fontWeight: 500,
+                '& .MuiChip-label': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }
+              }} 
+            />
+          );
+        },
+      },
+    ];
+
+    // Only add Category column if there are categories in settings
+    if (hasCategories) {
+      columns.push({
+        header: 'Category',
+        render: (task) => (
           <Chip 
-            label={statusLabels[task.status] || 'Unknown'} 
+            label={task.category || 'Uncategorized'} 
+            size="small"
+            variant="outlined"
+            sx={{ 
+              borderColor: notionColors.border.default,
+              color: task.category ? notionColors.text.primary : notionColors.text.disabled,
+              maxWidth: '100%',
+              '& .MuiChip-label': {
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }
+            }} 
+          />
+        ),
+      });
+    }
+
+    columns.push(
+      {
+        header: 'Sender',
+        render: (task) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
+            {task.email_sender || 'Unknown'}
+          </Typography>
+        ),
+      },
+      {
+        header: 'Provider',
+        render: (task) => (
+          <Chip 
+            label={task.provider} 
             size="small"
             sx={{ 
-              backgroundColor: colors.bg,
-              color: colors.text,
+              backgroundColor: notionColors.chip.default,
+              color: notionColors.primary.main,
               maxWidth: '100%',
               fontWeight: 500,
               '& .MuiChip-label': {
@@ -170,102 +229,84 @@ export default function Converter({ authenticated }: ConverterProps) {
               }
             }} 
           />
-        );
+        ),
       },
-    },
-    {
-      header: 'Category',
-      render: (task) => (
-        <Chip 
-          label={task.category || 'Uncategorized'} 
-          size="small"
-          variant="outlined"
-          sx={{ 
-            borderColor: notionColors.border.default,
-            color: task.category ? notionColors.text.primary : notionColors.text.disabled,
-            maxWidth: '100%',
-            '& .MuiChip-label': {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }
-          }} 
-        />
-      ),
-    },
-    {
-      header: 'Sender',
-      render: (task) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
-          {task.email_sender || 'Unknown'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Provider',
-      render: (task) => (
-        <Chip 
-          label={task.provider} 
-          size="small"
-          sx={{ 
-            backgroundColor: notionColors.chip.default,
-            color: notionColors.primary.main,
-            maxWidth: '100%',
-            fontWeight: 500,
-            '& .MuiChip-label': {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }
-          }} 
-        />
-      ),
-    },
-    {
-      header: 'Due Date',
-      render: (task) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
-          {task.task_due || '—'}
-        </Typography>
-      ),
-    },
-  ], []);
+      {
+        header: 'Due Date',
+        render: (task) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
+            {task.task_due || '—'}
+          </Typography>
+        ),
+      }
+    );
+
+    return columns;
+  }, [settings]);
 
   // Event table columns
-  const eventColumns: Column<CalendarEvent>[] = useMemo(() => [
-    {
-      header: 'Event',
-      render: (event) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
-          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
-            {event.summary || 'Meeting'}
-          </Typography>
-        </Box>
-      ),
-    },
-    {
-      header: 'Status',
-      render: (event) => {
-        const statusLabels: Record<string, string> = {
-          'pending': 'Pending',
-          'created': 'Created',
-          'skipped': 'Skipped',
-        };
-        const statusColors: Record<string, { bg: string; text: string }> = {
-          'pending': { bg: notionColors.warning?.background || '#FFF4E5', text: notionColors.warning?.text || '#B7791F' },
-          'created': { bg: notionColors.chip.success, text: notionColors.chip.successText },
-          'skipped': { bg: notionColors.error.background, text: notionColors.error.text },
-        };
-        const colors = statusColors[event.status] || statusColors['skipped'];
-        return (
+  const eventColumns: Column<CalendarEvent>[] = useMemo(() => {
+    const hasCategories = settings?.calendar_categories && settings.calendar_categories.length > 0;
+    
+    const columns: Column<CalendarEvent>[] = [
+      {
+        header: 'Event',
+        render: (event) => (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden' }}>
+            <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+              {event.summary || 'Meeting'}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        header: 'Status',
+        render: (event) => {
+          const statusLabels: Record<string, string> = {
+            'pending': 'Pending',
+            'created': 'Created',
+            'skipped': 'Skipped',
+          };
+          const statusColors: Record<string, { bg: string; text: string }> = {
+            'pending': { bg: notionColors.warning?.background || '#FFF4E5', text: notionColors.warning?.text || '#B7791F' },
+            'created': { bg: notionColors.chip.success, text: notionColors.chip.successText },
+            'skipped': { bg: notionColors.error.background, text: notionColors.error.text },
+          };
+          const colors = statusColors[event.status] || statusColors['skipped'];
+          return (
+            <Chip 
+              label={statusLabels[event.status] || 'Unknown'} 
+              size="small"
+              sx={{ 
+                backgroundColor: colors.bg,
+                color: colors.text,
+                maxWidth: '100%',
+                fontWeight: 500,
+                '& .MuiChip-label': {
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }
+              }} 
+            />
+          );
+        },
+      },
+    ];
+
+    // Only add Category column if there are categories in settings
+    if (hasCategories) {
+      columns.push({
+        header: 'Category',
+        render: (event) => (
           <Chip 
-            label={statusLabels[event.status] || 'Unknown'} 
+            label={event.category || 'Uncategorized'} 
             size="small"
+            variant="outlined"
             sx={{ 
-              backgroundColor: colors.bg,
-              color: colors.text,
+              borderColor: notionColors.border.default,
+              color: event.category ? notionColors.text.primary : notionColors.text.disabled,
               maxWidth: '100%',
-              fontWeight: 500,
               '& .MuiChip-label': {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -273,70 +314,55 @@ export default function Converter({ authenticated }: ConverterProps) {
               }
             }} 
           />
-        );
+        ),
+      });
+    }
+
+    columns.push(
+      {
+        header: 'Location',
+        render: (event) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
+            {event.location || '—'}
+          </Typography>
+        ),
       },
-    },
-    {
-      header: 'Category',
-      render: (event) => (
-        <Chip 
-          label={event.category || 'Uncategorized'} 
-          size="small"
-          variant="outlined"
-          sx={{ 
-            borderColor: notionColors.border.default,
-            color: event.category ? notionColors.text.primary : notionColors.text.disabled,
-            maxWidth: '100%',
-            '& .MuiChip-label': {
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }
-          }} 
-        />
-      ),
-    },
-    {
-      header: 'Location',
-      render: (event) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
-          {event.location || '—'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Date',
-      render: (event) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
-          {event.start_datetime ? formatDateOnly(event.start_datetime) : '—'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'Start Time',
-      render: (event) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
-          {event.start_datetime ? formatTimeOnly(event.start_datetime) : '—'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'End Time',
-      render: (event) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
-          {event.end_datetime ? formatTimeOnly(event.end_datetime) : '—'}
-        </Typography>
-      ),
-    },
-    {
-      header: 'From Email',
-      render: (event) => (
-        <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
-          {event.email_sender || 'Unknown'}
-        </Typography>
-      ),
-    },
-  ], []);
+      {
+        header: 'Date',
+        render: (event) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+            {event.start_datetime ? formatDateOnly(event.start_datetime) : '—'}
+          </Typography>
+        ),
+      },
+      {
+        header: 'Start Time',
+        render: (event) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+            {event.start_datetime ? formatTimeOnly(event.start_datetime) : '—'}
+          </Typography>
+        ),
+      },
+      {
+        header: 'End Time',
+        render: (event) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px' }}>
+            {event.end_datetime ? formatTimeOnly(event.end_datetime) : '—'}
+          </Typography>
+        ),
+      },
+      {
+        header: 'From Email',
+        render: (event) => (
+          <Typography variant="body2" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '14px', color: notionColors.text.secondary }}>
+            {event.email_sender || 'Unknown'}
+          </Typography>
+        ),
+      }
+    );
+
+    return columns;
+  }, [settings]);
   
   // Compute base formData from settings
   const baseFormData = useMemo<FetchEmailsParams>(() => ({

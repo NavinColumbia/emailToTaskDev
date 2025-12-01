@@ -1,13 +1,19 @@
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
 # Load .env from project root (parent directory)
 load_dotenv(dotenv_path=Path(__file__).parent.parent / '.env', override=False)
 
-_project_root = Path(__file__).parent.parent.resolve()
-_env_secrets = os.getenv("GOOGLE_CLIENT_SECRETS")
-CLIENT_SECRETS_FILE = _env_secrets if _env_secrets and os.path.isabs(_env_secrets) else str(_project_root / (_env_secrets or "client_secret.json"))
+_google_client_secrets_json = os.getenv("GOOGLE_CLIENT_SECRETS_JSON")
+if not _google_client_secrets_json:
+    raise ValueError("GOOGLE_CLIENT_SECRETS_JSON environment variable is required")
+
+try:
+    CLIENT_SECRETS_CONFIG = json.loads(_google_client_secrets_json)
+except json.JSONDecodeError as e:
+    raise ValueError(f"Failed to parse GOOGLE_CLIENT_SECRETS_JSON: {e}")
 
 REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5001/oauth2callback")
 DEFAULT_PROVIDER = os.getenv("DEFAULT_TASK_PROVIDER", "google_tasks")
