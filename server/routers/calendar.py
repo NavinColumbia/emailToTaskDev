@@ -21,6 +21,10 @@ def api_all_calendar_events():
 
     user_id = user.id
 
+    # Get optional query parameters
+    category = request.values.get("category")
+    sort = request.values.get("sort")
+
     try:
         with db_session() as s:
             stmt = (
@@ -28,9 +32,26 @@ def api_all_calendar_events():
                 .join(Email, Email.id == CalendarEvent.email_id)
                 .where(CalendarEvent.user_id == user_id)
                 .where(Email.user_id == user_id)
-                .order_by(CalendarEvent.created_at.desc())
-                .limit(200)
             )
+            
+            # Apply category filter if provided
+            if category:
+                stmt = stmt.where(CalendarEvent.category == category)
+            
+            # Apply sorting
+            if sort == "category":
+                # Order by category ascending, then by start_datetime (or created_at) descending
+                # Events with start_datetime will be sorted by start_datetime, 
+                # events without will use created_at as the secondary sort
+                stmt = stmt.order_by(
+                    CalendarEvent.category.asc(),
+                    CalendarEvent.start_datetime.desc().nulls_last(),
+                    CalendarEvent.created_at.desc()
+                )
+            else:
+                stmt = stmt.order_by(CalendarEvent.created_at.desc())
+            
+            stmt = stmt.limit(200)
             rows = s.execute(stmt).all()
             items = []
             for row in rows:
@@ -48,6 +69,7 @@ def api_all_calendar_events():
                     "email_sender": e.sender,
                     "email_received_at": e.received_at.isoformat() if e.received_at else "",
                     "status": ce.status or "created",
+                    "category": ce.category,
                 })
         return jsonify({"events": items, "total": len(items)})
     except Exception as e:
