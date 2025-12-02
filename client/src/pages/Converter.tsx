@@ -42,7 +42,7 @@ function TabPanel(props: TabPanelProps) {
       aria-labelledby={`tab-${index}`}
       {...other}
     >
-      {value === index && <Box sx={{ pt: 3 }}>{children}</Box>}
+      <Box sx={{ pt: 3, display: value === index ? 'block' : 'none' }}>{children}</Box>
     </div>
   );
 }
@@ -463,11 +463,11 @@ export default function Converter({ authenticated }: ConverterProps) {
 
     return (
       <>
-      <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3, pt: 4 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, pt: 0 }}>
         <Box sx={{ mb: 4 }}>
           <PageHeader />
 
-          <Box sx={{ borderBottom: `2px solid ${notionColors.border.default}`, mb: 4 }}>
+          <Box sx={{ borderBottom: `2px solid ${notionColors.border.light}`, mb: 4 }}>
             <Tabs 
               value={tabValue} 
               onChange={(_, newValue) => setTabValue(newValue)}

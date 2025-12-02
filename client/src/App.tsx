@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, useSearchParams } from 'react-router-dom';
-import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useSearchParams, useLocation } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { ThemeProvider, CssBaseline, CircularProgress, Box } from '@mui/material';
 import { useAuth } from './hooks';
 import { setToken } from './apis/base';
@@ -8,10 +8,22 @@ import Home from './pages/Home';
 import Converter from './pages/Converter';
 import Settings from './pages/Settings';
 import { theme } from './theme';
+import gradientBackground from './assets/gradient-background.png';
 
 function AppContent() {
   const { authenticated, loading, checkAuth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
+  const [initialized, setInitialized] = useState(false);
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  useEffect(() => {
+    // Only check auth once on mount
+    if (!initialized) {
+      checkAuth();
+      setInitialized(true);
+    }
+  }, [checkAuth, initialized]);
 
   useEffect(() => {
     // Extract token from URL query param after OAuth redirect
@@ -19,11 +31,14 @@ function AppContent() {
     if (token) {
       setToken(token);
       // Remove token from URL
-      searchParams.delete('token');
-      setSearchParams(searchParams, { replace: true });
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('token');
+      setSearchParams(newSearchParams, { replace: true });
+      // Re-check auth after setting token
+      checkAuth();
     }
-    checkAuth();
-  }, [checkAuth, searchParams, setSearchParams]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()]);
 
   if (loading || authenticated === null) {
     return (
@@ -38,16 +53,60 @@ function AppContent() {
       sx={{ 
         minHeight: '100vh', 
         pb: 6,
+        position: 'relative',
+        backgroundColor: isHome ? '#0e0e0e' : '#ffffff',
+        overflow: 'hidden',
+        '&::before': {
+          content: '""',
+          position: 'fixed',
+          top: '-400px',
+          right: isHome ? '-200px' : '-400px',
+          width: '1000px',
+          height: 'auto',
+          aspectRatio: '1 / 1',
+          backgroundImage: `url(${gradientBackground})`,
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          transform: 'rotate(60deg)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          opacity: isHome ? 0.4 : 0.2,
+        },
+        '&::after': {
+          content: '""',
+          position: 'fixed',
+          bottom: '-900px',
+          left: '-550px',
+          width: '1200px',
+          height: 'auto',
+          aspectRatio: '1 / 1',
+          backgroundImage: `url(${gradientBackground})`,
+          backgroundSize: 'cover',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          transform: 'rotate(-60deg)',
+          zIndex: 0,
+          pointerEvents: 'none',
+          opacity: 0.3,
+        },
       }}
     >
-      <Navbar authenticated={authenticated} onAuthChange={checkAuth} />
-      <Box sx={{ maxWidth: '900px', width: '100%', mx: 'auto' }}>
-        <Routes>
-          <Route path="/" element={<Home authenticated={authenticated} />} />
-          <Route path="/converter" element={<Converter authenticated={authenticated} />} />
-          <Route path="/settings" element={<Settings authenticated={authenticated} />} />
-          <Route path="*" element={<Home authenticated={authenticated} />} />
-        </Routes>
+      <Box sx={{ position: 'relative', zIndex: 1 }}>
+        <Navbar authenticated={authenticated} onAuthChange={checkAuth} />
+      </Box>
+      <Box sx={{ maxWidth: '1200px', width: '100%', mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, pt: 8, position: 'relative', zIndex: 1 }}>
+        <Box sx={{ 
+          minHeight: 'calc(100vh - 200px)',
+          position: 'relative',
+        }}>
+          <Routes>
+            <Route path="/" element={<Home authenticated={authenticated} />} />
+            <Route path="/converter" element={<Converter authenticated={authenticated} />} />
+            <Route path="/settings" element={<Settings authenticated={authenticated} />} />
+            <Route path="*" element={<Home authenticated={authenticated} />} />
+          </Routes>
+        </Box>
       </Box>
     </Box>
   );

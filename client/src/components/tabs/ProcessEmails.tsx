@@ -52,10 +52,11 @@ export default function ProcessEmails({
           startIcon={loading ? <CircularProgress size={16} color="inherit" /> : <DownloadIcon sx={{ fontSize: 18 }} />}
           disabled={loading}
           sx={{
-              px: 3,
-              py: 1.25,
-              borderRadius: '3px',
-              fontSize: '14px',
+              px: 4,
+              py: 1.5,
+              borderRadius: 0,
+              fontSize: '15px',
+              fontWeight: 600,
           }}
         >
           {loading ? 'Processing...' : 'Process Emails'}

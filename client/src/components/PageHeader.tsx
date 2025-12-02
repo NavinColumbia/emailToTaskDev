@@ -16,12 +16,15 @@ export default function PageHeader({
           variant="h1" 
           component="h1" 
           sx={{ 
-            fontSize: '32px',
+            fontSize: '36px',
             mb: 0.5,
-            mt: 5,
-            letterSpacing: '-0.01em',
-            color: notionColors.primary.main,
-            fontWeight: 600,
+            mt: 0,
+            letterSpacing: '-0.02em',
+            background: notionColors.primary.gradient,
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            fontWeight: 700,
           }}
         >
           {title}

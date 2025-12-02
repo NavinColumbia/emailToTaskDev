@@ -129,26 +129,23 @@ export default function DataTable<T>({
     item => selectedItems.has(getItemId(item)) && getItemLink(item)
   );
 
-  if (loading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 6 }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
   if (data.length === 0) {
     return (
       <Box 
         sx={{ 
-          border: `1.5px solid ${notionColors.border.default}`, 
-          borderRadius: '12px', 
+          border: `1.5px solid ${notionColors.border.light}`, 
+          borderRadius: 0, 
           p: 6, 
           textAlign: 'center',
           backgroundColor: '#FFFFFF',
+          boxShadow: notionColors.shadow.card,
         }}
       >
-        {emptyIcon}
+        {loading ? (
+          <CircularProgress size={48} sx={{ mb: 2, color: 'lightgray' }} />
+        ) : (
+          emptyIcon
+        )}
         <Typography variant="h6" sx={{ mb: 1, fontSize: '16px', fontWeight: 600, color: notionColors.text.primary }}>
           {emptyTitle}
         </Typography>
@@ -167,23 +164,24 @@ export default function DataTable<T>({
           maxHeight: '50vh', 
           overflow: 'auto', 
           position: 'relative',
-          borderRadius: '12px',
-          border: `1.5px solid ${notionColors.border.default}`,
+          borderRadius: 0,
+          border: `1.5px solid ${notionColors.border.light}`,
           boxShadow: notionColors.shadow.card,
           backgroundColor: '#FFFFFF',
           '&::-webkit-scrollbar': {
-            width: '6px',
-            height: '6px',
+            width: '8px',
+            height: '8px',
           },
           '&::-webkit-scrollbar-track': {
-            background: '#f1f1f1',
-            borderRadius: '3px',
+            background: '#F1F5F9',
+            borderRadius: 0,
           },
           '&::-webkit-scrollbar-thumb': {
-            background: notionColors.primary.main,
-            borderRadius: '3px',
+            background: 'linear-gradient(135deg, #60A5FA 0%, #2563EB 100%)',
+            borderRadius: 0,
+            border: '2px solid #F1F5F9',
             '&:hover': {
-              background: notionColors.primary.dark,
+              background: 'linear-gradient(135deg, #3B82F6 0%, #1E40AF 100%)',
             },
           },
         }}
@@ -221,7 +219,11 @@ export default function DataTable<T>({
                     zIndex: 2,
                     backgroundColor: '#FFFFFF',
                     fontWeight: 600,
-                    color: notionColors.primary.main,
+                    fontSize: '13px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    color: notionColors.text.secondary,
+                    borderBottom: `2px solid ${notionColors.border.light}`,
                   }}
                 >
                   {column.header}
@@ -240,7 +242,7 @@ export default function DataTable<T>({
                     left: 0,
                     zIndex: 1,
                     backgroundColor: '#FFFFFF',
-                    borderRight: `1.5px solid ${notionColors.border.default}`,
+                    borderRight: `1.5px solid ${notionColors.border.light}`,
                   }}
                 >
                   <Checkbox

@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { AppBar, Toolbar, Typography, Button, Box, Avatar, Menu, MenuItem, IconButton } from '@mui/material';
-import { Email as EmailIcon, Settings as SettingsIcon, AutoAwesome as ConverterIcon, Google as GoogleIcon, Logout as LogoutIcon, AccountCircle as AccountCircleIcon } from '@mui/icons-material';
+import { memo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { Email as EmailIcon, Settings as SettingsIcon, AutoAwesome as ConverterIcon, Logout as LogoutIcon } from '@mui/icons-material';
 import { api } from '../apis/api';
 import { notionColors } from '../theme';
 
@@ -10,29 +10,11 @@ interface NavbarProps {
   onAuthChange: () => void;
 }
 
-export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
+function Navbar({ authenticated, onAuthChange }: NavbarProps) {
   const location = useLocation();
-  const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const open = Boolean(anchorEl);
-
-  const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-  };
-
-  const handleMenuItemClick = (path?: string) => {
-    handleMenuClose();
-    if (path) {
-      navigate(path);
-    }
-  };
+  const isHome = location.pathname === '/';
 
   const handleLogout = async () => {
-    handleMenuClose();
     await api.logout();
     onAuthChange();
   };
@@ -42,13 +24,14 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
       position="sticky" 
       elevation={0}
       sx={{ 
-        mb: 0,
-        backgroundColor: '#FFFFFF',
-        color: 'text.primary',
-        borderBottom: `1px solid ${notionColors.border.default}`,
+        mb: 3,
+        backgroundColor: isHome ? 'transparent' : '#FFFFFF',
+        color: isHome ? '#FFFFFF' : 'text.primary',
+        border: 'none',
+        boxShadow: isHome ? 'none' : undefined,
       }}
     >
-      <Toolbar sx={{ maxWidth: '900px', width: '100%', mx: 'auto', px: 3, py: 1.5, minHeight: '48px !important' }}>
+      <Toolbar sx={{ width: '100%', px: 3, py: 2, minHeight: '64px !important' }}>
         <Box 
           component={Link} 
           to="/" 
@@ -57,140 +40,103 @@ export default function Navbar({ authenticated, onAuthChange }: NavbarProps) {
             alignItems: 'center', 
             gap: 1.5, 
             textDecoration: 'none', 
-            color: notionColors.text.primary,
+            color: isHome ? '#FFFFFF' : notionColors.text.primary,
             '&:hover': { opacity: 0.7 },
             transition: 'opacity 0.2s',
           }}
         >
-          <EmailIcon sx={{ fontSize: 22, color: notionColors.primary.main }} />
+          <EmailIcon sx={{ fontSize: 22, color: isHome ? '#FFFFFF' : notionColors.primary.main }} />
           <Typography 
             variant="h6" 
             component="div" 
             sx={{ 
-              fontWeight: 600,
+              fontWeight: 700,
               fontSize: '24px',
-              letterSpacing: '-0.01em',
-              color: notionColors.primary.main,
+              letterSpacing: '-0.02em',
+              ...(isHome ? {
+                color: '#FFFFFF',
+              } : {
+                background: notionColors.primary.gradient,
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                backgroundClip: 'text',
+              }),
             }}
           >
             Taskflow
           </Typography>
         </Box>
         <Box sx={{ flexGrow: 1 }} />
-        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-          {authenticated ? (
-            <>
-              <IconButton
-                onClick={handleProfileClick}
-                sx={{
-                  padding: 0,
-                  '&:hover': {
-                    backgroundColor: 'transparent',
-                  },
-                }}
-              >
-                <Avatar
-                  sx={{
-                    width: 36,
-                    height: 36,
-                    backgroundColor: 'transparent',
-                    color: notionColors.text.secondary,
-                  }}
-                >
-                  <AccountCircleIcon sx={{ fontSize: 36 }} />
-                </Avatar>
-              </IconButton>
-              <Menu
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleMenuClose}
-                anchorOrigin={{
-                  vertical: 'bottom',
-                  horizontal: 'right',
-                }}
-                transformOrigin={{
-                  vertical: 'top',
-                  horizontal: 'right',
-                }}
-                sx={{
-                  '& .MuiPaper-root': {
-                    borderRadius: '8px',
-                    border: `1px solid ${notionColors.border.default}`,
-                    boxShadow: notionColors.shadow.dialog,
-                    mt: 1,
-                    minWidth: 180,
-                  },
-                }}
-              >
-                <MenuItem
-                  onClick={() => handleMenuItemClick('/converter')}
-                  selected={location.pathname === '/converter'}
-                  sx={{
-                    fontSize: '14px',
-                    py: 1.5,
-                    '&.Mui-selected': {
-                      backgroundColor: notionColors.background.hover,
-                      '&:hover': {
-                        backgroundColor: notionColors.background.hover,
-                      },
-                    },
-                  }}
-                >
-                  <ConverterIcon sx={{ fontSize: 18, mr: 1.5, color: notionColors.text.secondary }} />
-                  Converter
-                </MenuItem>
-                <MenuItem
-                  onClick={() => handleMenuItemClick('/settings')}
-                  selected={location.pathname === '/settings'}
-                  sx={{
-                    fontSize: '14px',
-                    py: 1.5,
-                    '&.Mui-selected': {
-                      backgroundColor: notionColors.background.hover,
-                      '&:hover': {
-                        backgroundColor: notionColors.background.hover,
-                      },
-                    },
-                  }}
-                >
-                  <SettingsIcon sx={{ fontSize: 18, mr: 1.5, color: notionColors.text.secondary }} />
-                  Settings
-                </MenuItem>
-                <MenuItem
-                  onClick={handleLogout}
-                  sx={{
-                    fontSize: '14px',
-                    py: 1.5,
-                    color: notionColors.error.text,
-                    '&:hover': {
-                      backgroundColor: notionColors.error.background,
-                    },
-                  }}
-                >
-                  <LogoutIcon sx={{ fontSize: 18, mr: 1.5 }} />
-                  Logout
-                </MenuItem>
-              </Menu>
-            </>
-          ) : (
+        {authenticated && (
+          <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
             <Button
-              onClick={() => api.authorize()}
-              variant="contained"
-              startIcon={<GoogleIcon sx={{ fontSize: 18 }} />}
+              component={Link}
+              to="/converter"
+              variant="text"
+              startIcon={<ConverterIcon sx={{ fontSize: 18, color: isHome ? '#FFFFFF' : 'inherit' }} />}
               sx={{ 
                 fontSize: '14px',
                 px: 2,
                 py: 0.75,
-                borderRadius: '3px',
+                borderRadius: 0,
                 minWidth: 'auto',
+                textTransform: 'none',
+                color: isHome ? '#FFFFFF' : 'inherit',
+                '&:hover': {
+                  backgroundColor: isHome ? 'rgba(255, 255, 255, 0.1)' : undefined,
+                  color: isHome ? '#FFFFFF' : undefined,
+                },
               }}
             >
-              Google Login
+              Converter
             </Button>
-          )}
-        </Box>
+            <Button
+              component={Link}
+              to="/settings"
+              variant="text"
+              startIcon={<SettingsIcon sx={{ fontSize: 18, color: isHome ? '#FFFFFF' : 'inherit' }} />}
+              sx={{ 
+                fontSize: '14px',
+                px: 2,
+                py: 0.75,
+                borderRadius: 0,
+                minWidth: 'auto',
+                textTransform: 'none',
+                color: isHome ? '#FFFFFF' : 'inherit',
+                '&:hover': {
+                  backgroundColor: isHome ? 'rgba(255, 255, 255, 0.1)' : undefined,
+                  color: isHome ? '#FFFFFF' : undefined,
+                },
+              }}
+            >
+              Settings
+            </Button>
+            <Button
+              onClick={handleLogout}
+              variant="text"
+              startIcon={<LogoutIcon sx={{ fontSize: 18, color: isHome ? '#FFFFFF' : 'inherit' }} />}
+              sx={{ 
+                fontSize: '14px',
+                px: 2,
+                py: 0.75,
+                borderRadius: 0,
+                minWidth: 'auto',
+                textTransform: 'none',
+                color: isHome ? '#FFFFFF' : 'inherit',
+                '&:hover': {
+                  backgroundColor: isHome ? 'rgba(255, 255, 255, 0.1)' : undefined,
+                  color: isHome ? '#FFFFFF' : undefined,
+                },
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
+        )}
       </Toolbar>
     </AppBar>
   );
 }
+
+export default memo(Navbar);
 

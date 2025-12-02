@@ -115,7 +115,7 @@ export default function Settings({ authenticated }: SettingsProps) {
 
   return (
     <>
-      <Box sx={{ maxWidth: 1400, mx: 'auto', px: 3, pt: 4 }}>
+      <Box sx={{ maxWidth: 1400, mx: 'auto', px: { xs: 2, sm: 3, md: 4 }, pt: 0 }}>
         <PageHeader 
           title="Settings"
           description="Configure default preferences for processing emails."

@@ -1,41 +1,46 @@
 import { createTheme } from '@mui/material/styles';
 
-// Modern, refined color palette
+// Modern blue and white business presentation color palette
 export const notionColors = {
-  // Primary colors - blue palette from SVG image
+  // Primary colors - sophisticated blue palette for business presentation
   primary: {
-    main: '#30A8FF', // Bright blue from SVG
-    light: '#88C0FF', // Medium-light blue from SVG
-    dark: '#2B7BC5', // Medium-dark blue from SVG
+    main: '#2563EB', // Professional blue
+    light: '#60A5FA', // Lighter blue for accents
+    dark: '#1E40AF', // Darker blue for depth
     contrast: '#FFFFFF',
+    gradient: 'linear-gradient(135deg, #2563EB 0%, #1E40AF 100%)',
+    lightGradient: 'linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%)',
   },
-  // Text colors
+  // Text colors - refined for readability
   text: {
-    primary: '#1F2937',
-    secondary: '#6B7280',
-    tertiary: '#9CA3AF',
-    disabled: '#D1D5DB',
+    primary: '#0F172A', // Deep slate for headings
+    secondary: '#1E293B', // Darker slate for body - better contrast
+    tertiary: '#475569', // Medium slate for hints - better contrast
+    disabled: '#CBD5E1',
   },
-  // Background colors
+  // Background colors - clean whites with subtle tints
   background: {
     default: '#FFFFFF',
     paper: '#FFFFFF',
-    hover: 'rgba(48, 168, 255, 0.06)',
-    hoverLight: 'rgba(48, 168, 255, 0.03)',
-    button: '#30A8FF',
-    buttonHover: '#2B7BC5',
-    buttonDisabled: '#D1D5DB',
+    subtle: '#F8FAFC', // Very light blue-gray tint
+    hover: 'rgba(37, 99, 235, 0.08)',
+    hoverLight: 'rgba(37, 99, 235, 0.04)',
+    button: '#2563EB',
+    buttonHover: '#1E40AF',
+    buttonDisabled: '#CBD5E1',
+    gradient: 'linear-gradient(180deg, #FFFFFF 0%, #F8FAFC 100%)',
   },
-  // Border colors
+  // Border colors - refined and subtle
   border: {
-    default: '#E5E7EB',
-    hover: '#D1D5DB',
-    focus: '#30A8FF',
+    default: '#94A3B8',
+    hover: '#64748B',
+    focus: '#2563EB',
+    light: '#CBD5E1',
   },
-  // Chip colors
+  // Chip colors - modern and clean
   chip: {
-    default: 'rgba(48, 168, 255, 0.08)',
-    text: '#30A8FF',
+    default: 'rgba(37, 99, 235, 0.1)',
+    text: '#2563EB',
     success: '#D1FAE5',
     successText: '#059669',
   },
@@ -52,11 +57,13 @@ export const notionColors = {
     main: '#F5A623',
     dark: '#D68910',
   },
-  // Shadow
+  // Shadow - refined for modern presentation style
   shadow: {
-    dialog: 'rgba(0, 0, 0, 0.1) 0px 0px 0px 1px, rgba(0, 0, 0, 0.05) 0px 3px 6px, rgba(0, 0, 0, 0.1) 0px 9px 24px',
-    card: 'rgba(0, 0, 0, 0.04) 0px 2px 8px, rgba(0, 0, 0, 0.02) 0px 1px 3px',
-    button: 'rgba(48, 168, 255, 0.2) 0px 4px 12px',
+    dialog: '0px 20px 25px -5px rgba(0, 0, 0, 0.1), 0px 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    card: '0px 4px 6px -1px rgba(0, 0, 0, 0.1), 0px 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    button: '0px 4px 14px 0px rgba(37, 99, 235, 0.25)',
+    buttonHover: '0px 6px 20px 0px rgba(37, 99, 235, 0.3)',
+    subtle: '0px 1px 3px 0px rgba(0, 0, 0, 0.1), 0px 1px 2px 0px rgba(0, 0, 0, 0.06)',
   },
 };
 
@@ -79,88 +86,113 @@ export const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: 'ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol"',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif',
     h1: {
       fontWeight: 700,
       fontSize: '48px',
-      lineHeight: 1.2,
-      letterSpacing: '-0.02em',
+      lineHeight: 1.1,
+      letterSpacing: '-0.03em',
       color: notionColors.text.primary,
     },
     h2: {
       fontWeight: 600,
-      fontSize: '32px',
-      letterSpacing: '-0.01em',
+      fontSize: '36px',
+      lineHeight: 1.2,
+      letterSpacing: '-0.02em',
       color: notionColors.text.primary,
     },
     h3: {
       fontWeight: 600,
-      fontSize: '24px',
+      fontSize: '28px',
+      lineHeight: 1.3,
       letterSpacing: '-0.01em',
       color: notionColors.text.primary,
     },
     h4: {
       fontWeight: 600,
-      fontSize: '20px',
+      fontSize: '22px',
+      lineHeight: 1.4,
+      letterSpacing: '-0.01em',
       color: notionColors.text.primary,
     },
     h5: {
       fontWeight: 600,
       fontSize: '18px',
+      lineHeight: 1.5,
       color: notionColors.text.primary,
     },
     h6: {
       fontWeight: 600,
       fontSize: '16px',
+      lineHeight: 1.5,
       color: notionColors.text.primary,
     },
     body1: {
-      fontSize: '18px',
-      lineHeight: 1.6,
+      fontSize: '16px',
+      lineHeight: 1.7,
       color: notionColors.text.secondary,
     },
     body2: {
       fontSize: '14px',
+      lineHeight: 1.6,
       color: notionColors.text.secondary,
     },
     button: {
       textTransform: 'none',
-      fontSize: '14px',
-      fontWeight: 400,
+      fontSize: '15px',
+      fontWeight: 500,
+      letterSpacing: '0.01em',
     },
   },
   shape: {
-    borderRadius: 3,
+    borderRadius: 0,
   },
   components: {
     MuiButton: {
+      defaultProps: {
+        disableRipple: true,
+      },
       styleOverrides: {
         root: {
-          borderRadius: '3px',
+          borderRadius: 0,
           textTransform: 'none',
-          fontSize: '14px',
-          fontWeight: 400,
-          transition: 'all 0.2s',
+          fontSize: '15px',
+          fontWeight: 500,
+          padding: '10px 24px',
+          transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
         },
         contained: {
-          backgroundColor: notionColors.background.button,
+          backgroundColor: notionColors.primary.main,
           color: 'white',
-          boxShadow: notionColors.shadow.button,
+          boxShadow: 'none',
           fontWeight: 500,
+          transition: 'background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
           '&:hover': {
-            backgroundColor: notionColors.background.buttonHover,
-            boxShadow: notionColors.shadow.button,
-            transform: 'translateY(-1px)',
+            backgroundColor: notionColors.primary.dark,
+            boxShadow: 'none',
+            transform: 'translateY(-2px)',
           },
           '&:disabled': {
             backgroundColor: notionColors.background.buttonDisabled,
             boxShadow: 'none',
+            transform: 'none',
+          },
+        },
+        outlined: {
+          borderColor: notionColors.border.default,
+          color: notionColors.text.primary,
+          borderWidth: '1.5px',
+          '&:hover': {
+            borderColor: notionColors.primary.main,
+            backgroundColor: notionColors.background.hoverLight,
+            borderWidth: '1.5px',
           },
         },
         text: {
           color: notionColors.text.secondary,
           '&:hover': {
             backgroundColor: notionColors.background.hover,
+            color: notionColors.text.primary,
           },
         },
       },
@@ -169,7 +201,8 @@ export const theme = createTheme({
       styleOverrides: {
         root: {
           '& .MuiOutlinedInput-root': {
-            borderRadius: '3px',
+            borderRadius: 0,
+            backgroundColor: '#FFFFFF',
             '& fieldset': {
               borderColor: notionColors.border.default,
               borderWidth: '1.5px',
@@ -182,22 +215,27 @@ export const theme = createTheme({
               borderWidth: '2px',
             },
             '& input': {
-              fontSize: '14px',
+              fontSize: '15px',
+              padding: '12px 14px',
             },
             '& textarea': {
-              fontSize: '14px',
+              fontSize: '15px',
+              padding: '12px 14px',
             },
             '& .MuiSelect-select': {
-              fontSize: '14px',
+              fontSize: '15px',
+              padding: '12px 14px',
             },
           },
           '& .MuiInputLabel-root': {
             color: notionColors.text.secondary,
             fontSize: '14px',
+            fontWeight: 500,
           },
           '& .MuiFormHelperText-root': {
             color: notionColors.text.tertiary,
             fontSize: '12px',
+            marginTop: '6px',
           },
         },
       },
@@ -219,23 +257,30 @@ export const theme = createTheme({
         },
       },
     },
+    MuiTab: {
+      defaultProps: {
+        disableRipple: true,
+      },
+    },
     MuiTabs: {
       styleOverrides: {
         root: {
           '& .MuiTab-root': {
             textTransform: 'none',
-            fontSize: '14px',
-            fontWeight: 400,
+            fontSize: '15px',
+            fontWeight: 500,
             color: notionColors.text.secondary,
-            minHeight: 40,
+            minHeight: 48,
+            padding: '12px 20px',
             '&.Mui-selected': {
-              color: notionColors.text.primary,
+              color: notionColors.primary.main,
+              fontWeight: 600,
             },
           },
           '& .MuiTabs-indicator': {
             backgroundColor: notionColors.primary.main,
             height: '3px',
-            borderRadius: '3px 3px 0 0',
+            borderRadius: 0,
           },
         },
       },
@@ -276,20 +321,24 @@ export const theme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          borderRadius: '8px',
+          borderRadius: 0,
           boxShadow: notionColors.shadow.dialog,
-          border: `1px solid ${notionColors.border.default}`,
+          border: `1px solid ${notionColors.border.light}`,
         },
       },
     },
     MuiPaper: {
       styleOverrides: {
         root: {
-          borderRadius: '8px',
+          borderRadius: 0,
           boxShadow: notionColors.shadow.card,
+          border: `1px solid ${notionColors.border.light}`,
         },
         elevation1: {
           boxShadow: notionColors.shadow.card,
+        },
+        elevation2: {
+          boxShadow: notionColors.shadow.dialog,
         },
       },
     },
@@ -312,7 +361,7 @@ export const theme = createTheme({
     MuiAlert: {
       styleOverrides: {
         root: {
-          borderRadius: '3px',
+          borderRadius: 0,
           '&.MuiAlert-error': {
             backgroundColor: notionColors.error.background,
             color: notionColors.error.text,
@@ -320,6 +369,11 @@ export const theme = createTheme({
             '& .MuiAlert-icon': {
               color: notionColors.error.text,
             },
+          },
+          '&.MuiAlert-success': {
+            backgroundColor: notionColors.chip.success,
+            color: notionColors.chip.successText,
+            border: `1px solid ${notionColors.chip.success}`,
           },
         },
       },
