@@ -1,10 +1,10 @@
 # 📧 Taskflow
 
-A powerful Flask application that automatically converts Gmail emails into tasks using Google Tasks. Uses AI-powered classification to intelligently decide which emails should become tasks and automatically creates calendar events for meetings.
+A platform that automatically converts Gmail emails into Google Tasks and Google Calendar events. Uses AI-powered classification to intelligently decide which emails should become tasks and automatically creates calendar events for meetings. Built as part of a group project for an assignment at Columbia University.
 
 ## ✨ Features
 
-- **🔐 Secure Gmail Integration**: OAuth2 authentication with Google
+- **🔐 Secure Gmail Integration**: OAuth2 authentication with Google (credentials encrypted at rest)
 - **⚡ Automatic Task Creation**: Convert emails to Google Tasks instantly
 - **📅 Calendar Event Creation**: Automatically creates Google Calendar events for meeting invitations
 - **🤖 AI-Powered Classification**: Machine learning to decide which emails should become tasks
@@ -98,7 +98,7 @@ FLASK_SECRET=your-secret-key-here
 FLASK_ENV=development
 
 # Google OAuth Configuration
-GOOGLE_CLIENT_SECRETS=client_secret.json
+GOOGLE_CLIENT_SECRETS_JSON=path/to/client_secret.json (or the raw JSON content)
 GOOGLE_REDIRECT_URI=http://localhost:5001/oauth2callback
 
 # Task Provider Configuration
@@ -108,6 +108,9 @@ TASKS_LIST_TITLE=Email Tasks
 # OpenAI Configuration for ML Classification
 OPENAI_API_KEY=sk-your-openai-api-key-here
 OPENAI_MODEL=gpt-4o-mini
+
+# Security
+ENCRYPTION_KEY=your-fernet-key-here
 
 # Application Configuration
 PORT=5001
@@ -165,8 +168,9 @@ The application will:
 |----------|-------------|---------|
 | `FLASK_SECRET` | Flask session secret key | `dev-change-me` |
 | `FLASK_ENV` | Flask environment (development/production) | `development` |
-| `GOOGLE_CLIENT_SECRETS` | Path to Google OAuth credentials | `client_secret.json` |
+| `GOOGLE_CLIENT_SECRETS_JSON` | Google OAuth credentials JSON | Required |
 | `GOOGLE_REDIRECT_URI` | OAuth callback URL | `http://localhost:5001/oauth2callback` |
+| `ENCRYPTION_KEY` | Key for encrypting DB credentials | Required |
 | `DEFAULT_TASK_PROVIDER` | Default task provider | `google_tasks` |
 | `TASKS_LIST_TITLE` | Title for the Google Tasks list | `Email Tasks` |
 | `PORT` | Application port | `5001` |
@@ -200,9 +204,11 @@ The application is configured for deployment to Google Cloud Run:
 
 2. **Set up Secrets**:
    ```bash
-   # Create secrets from your .env file
-   # Note: You'll need to create a script to extract FLASK_SECRET and OPENAI_API_KEY
-   # and store them in Google Cloud Secret Manager
+   # Create secrets in Google Cloud Secret Manager:
+   # - FLASK_SECRET
+   # - OPENAI_API_KEY
+   # - GOOGLE_CLIENT_SECRETS_JSON (paste the full JSON content)
+   # - ENCRYPTION_KEY (your Fernet key)
    ```
 
 3. **Configure OAuth Redirect URI**:
