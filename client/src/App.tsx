@@ -38,8 +38,7 @@ function AppContent() {
       setSearchParams(newSearchParams, { replace: true });
       // Re-check auth after setting token - this will update authenticated state
       checkAuth()
-        .then((isAuthenticated) => {
-          // Small delay to ensure state updates propagate
+        .then(() => {
           setTimeout(() => {
             setProcessingToken(false);
           }, 100);
