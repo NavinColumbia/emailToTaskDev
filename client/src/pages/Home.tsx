@@ -3,12 +3,18 @@ import { Link } from 'react-router-dom';
 import { Google as GoogleIcon } from '@mui/icons-material';
 import { api } from '../apis/api';
 import productivityImage from '../assets/image.svg';
+import { useAuth } from '../hooks/useAuth';
+import { useEffect } from 'react';
 
 interface HomeProps {
   authenticated: boolean;
 }
 
 export default function Home({ authenticated }: HomeProps) {
+  const { checkAuth } = useAuth();
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', py: 4, gap: 2 }}>
       <Box

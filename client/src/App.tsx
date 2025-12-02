@@ -36,16 +36,18 @@ function AppContent() {
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('token');
       setSearchParams(newSearchParams, { replace: true });
-      checkAuth()
-        .then(() => {
-          setTimeout(() => {
+      
+      // Wait a bit before checking auth to handle any potential clock skew or propagation delays
+      setTimeout(() => {
+        checkAuth()
+          .then(() => {
             setProcessingToken(false);
-          }, 100);
-        })
-        .catch((err) => {
-          console.error('Failed to check auth after token set:', err);
-          setProcessingToken(false);
-        });
+          })
+          .catch((err) => {
+            console.error('Failed to check auth after token set:', err);
+            setProcessingToken(false);
+          });
+      }, 1000);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString()]);
