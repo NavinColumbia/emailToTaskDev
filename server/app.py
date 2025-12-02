@@ -48,7 +48,7 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_PATH'] = '/'
 
 # Enable CORS for all routes
-CORS(app, supports_credentials=True, origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'https://taskflow-82031.web.app'])
+CORS(app, supports_credentials=True, origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'https://taskflow-474913.web.app'])
 
 # Register blueprints
 app.register_blueprint(auth.auth_bp)

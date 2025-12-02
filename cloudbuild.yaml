@@ -39,7 +39,7 @@ steps:
 substitutions:
   _REGION: 'us-central1'
   _REPOSITORY: 'taskflow'
-  _FRONTEND_URL: 'https://taskflow-82031.web.app'
+  _FRONTEND_URL: 'https://taskflow-474913.web.app'
   _SERVER_URL: 'https://taskflow-server-367122183369.us-central1.run.app'
   _RECREATE_DB: 'false'
 
