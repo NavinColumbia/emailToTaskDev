@@ -14,6 +14,7 @@ function AppContent() {
   const { authenticated, loading, checkAuth } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [initialized, setInitialized] = useState(false);
+  const [processingToken, setProcessingToken] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === '/';
 
@@ -28,19 +29,30 @@ function AppContent() {
   useEffect(() => {
     // Extract token from URL query param after OAuth redirect
     const token = searchParams.get('token');
-    if (token) {
+    if (token && !processingToken) {
+      setProcessingToken(true);
       setToken(token);
-      // Remove token from URL
+      // Remove token from URL immediately to prevent re-processing
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('token');
       setSearchParams(newSearchParams, { replace: true });
-      // Re-check auth after setting token
-      checkAuth();
+      // Re-check auth after setting token - this will update authenticated state
+      checkAuth()
+        .then((isAuthenticated) => {
+          // Small delay to ensure state updates propagate
+          setTimeout(() => {
+            setProcessingToken(false);
+          }, 100);
+        })
+        .catch((err) => {
+          console.error('Failed to check auth after token set:', err);
+          setProcessingToken(false);
+        });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams.toString()]);
 
-  if (loading || authenticated === null) {
+  if (loading || authenticated === null || processingToken) {
     return (
       <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
         <CircularProgress />
