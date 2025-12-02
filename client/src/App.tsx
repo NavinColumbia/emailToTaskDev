@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Converter from './pages/Converter';
 import Settings from './pages/Settings';
+import NotFound from './pages/NotFound';
 import { theme } from './theme';
 import gradientBackground from './assets/gradient-background.png';
 
@@ -32,11 +33,9 @@ function AppContent() {
     if (token && !processingToken) {
       setProcessingToken(true);
       setToken(token);
-      // Remove token from URL immediately to prevent re-processing
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('token');
       setSearchParams(newSearchParams, { replace: true });
-      // Re-check auth after setting token - this will update authenticated state
       checkAuth()
         .then(() => {
           setTimeout(() => {
@@ -115,7 +114,7 @@ function AppContent() {
             <Route path="/" element={<Home authenticated={authenticated} />} />
             <Route path="/converter" element={<Converter authenticated={authenticated} />} />
             <Route path="/settings" element={<Settings authenticated={authenticated} />} />
-            <Route path="*" element={<Home authenticated={authenticated} />} />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </Box>
       </Box>

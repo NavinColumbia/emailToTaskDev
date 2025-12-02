@@ -1,8 +1,9 @@
 import { useState, useCallback } from 'react';
 import { api } from '../apis/api';
+import { getToken } from '../apis/base';
 
 export function useAuth() {
-  const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [authenticated, setAuthenticated] = useState<boolean>(!!getToken());
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {
@@ -26,6 +27,7 @@ export function useAuth() {
 
   const logout = useCallback(async () => {
     await api.logout();
+    setAuthenticated(false);
   }, []);
 
   return {
