@@ -89,7 +89,16 @@ def oauth2callback():
             if user_email:
                 session["user_email"] = user_email
                 with db_session() as s:
-                    get_or_create_user(s, user_email)
+                    user = get_or_create_user(s, user_email)
+                    
+                    # Store Google OAuth credentials in the database
+                    user.google_token = credentials.token
+                    user.google_refresh_token = credentials.refresh_token
+                    user.google_token_uri = credentials.token_uri
+                    user.google_client_id = credentials.client_id
+                    user.google_client_secret = credentials.client_secret
+                    user.google_scopes = credentials.scopes
+                    
                 logger.info(f"User authenticated: {user_email}")
                 
                 # Generate JWT token

@@ -9,7 +9,6 @@ from server.config import FLASK_SECRET
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from bs4 import BeautifulSoup
-from dateutil import parser as dateutil_parser
 from sqlalchemy import select
 from server.db import db_session, User
 
@@ -69,6 +68,21 @@ def require_auth(f):
     return decorated_function
 
 def _get_credentials():
+    if request and hasattr(request, 'user_email') and request.user_email:
+        with db_session() as s:
+            stmt = select(User).where(User.email == request.user_email)
+            user = s.execute(stmt).scalar_one_or_none()
+            if user and user.google_token:
+                creds_info = {
+                    "token": user.google_token,
+                    "refresh_token": user.google_refresh_token,
+                    "token_uri": user.google_token_uri,
+                    "client_id": user.google_client_id,
+                    "client_secret": user.google_client_secret,
+                    "scopes": user.google_scopes,
+                }
+                return Credentials.from_authorized_user_info(info=creds_info, scopes=SCOPES)
+
     creds_info = session.get("credentials")
     if not creds_info:
         return None

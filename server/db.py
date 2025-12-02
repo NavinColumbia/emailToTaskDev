@@ -24,6 +24,14 @@ class User(Base):
     email: Mapped[str] = mapped_column(Text, unique=True, nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # Google OAuth Credentials
+    google_token: Mapped[str | None] = mapped_column(Text)
+    google_refresh_token: Mapped[str | None] = mapped_column(Text)
+    google_token_uri: Mapped[str | None] = mapped_column(Text)
+    google_client_id: Mapped[str | None] = mapped_column(Text)
+    google_client_secret: Mapped[str | None] = mapped_column(Text)
+    google_scopes: Mapped[list[str] | None] = mapped_column(JSON)
     
     # Relationships
     emails: Mapped[list["Email"]] = relationship("Email", back_populates="user")
