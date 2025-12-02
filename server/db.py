@@ -1,6 +1,5 @@
 from __future__ import annotations
 import os
-import base64
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
@@ -34,7 +33,7 @@ class EncryptedString(TypeDecorator):
         if value is None:
             return None
         if not self.fernet:
-            return value  # Fallback if no key provided (dev only)
+            return value
         if isinstance(value, str):
             value = value.encode('utf-8')
         return self.fernet.encrypt(value).decode('utf-8')
