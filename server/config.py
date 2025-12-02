@@ -20,5 +20,6 @@ DEFAULT_PROVIDER = os.getenv("DEFAULT_TASK_PROVIDER", "google_tasks")
 DEFAULT_FETCH_LIMIT = int(os.getenv("FETCH_LIMIT", "10"))
 TASKS_LIST_TITLE = os.getenv("TASKS_LIST_TITLE", "Email Tasks")
 FLASK_SECRET = os.getenv("FLASK_SECRET", "dev-change-me")
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 

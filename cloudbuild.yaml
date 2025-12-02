@@ -27,7 +27,7 @@ steps:
       - '--set-env-vars'
       - 'FLASK_ENV=production,DB_DIR=/tmp,FRONTEND_URL=${_FRONTEND_URL},RECREATE_DB=${_RECREATE_DB},GOOGLE_REDIRECT_URI=${_SERVER_URL}/oauth2callback'
       - '--set-secrets'
-      - 'FLASK_SECRET=FLASK_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,GOOGLE_CLIENT_SECRETS_JSON=GOOGLE_CLIENT_SECRETS_JSON:latest'
+      - 'FLASK_SECRET=FLASK_SECRET:latest,OPENAI_API_KEY=OPENAI_API_KEY:latest,GOOGLE_CLIENT_SECRETS_JSON=GOOGLE_CLIENT_SECRETS_JSON:latest,ENCRYPTION_KEY=ENCRYPTION_KEY:latest'
       - '--memory'
       - '512Mi'
       - '--timeout'

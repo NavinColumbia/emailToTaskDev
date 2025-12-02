@@ -1,17 +1,54 @@
 from __future__ import annotations
 import os
+import base64
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
-from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, Integer
+from sqlalchemy import create_engine, ForeignKey, UniqueConstraint, Integer, TypeDecorator
 from sqlalchemy.orm import registry, mapped_column, Mapped, Session, sessionmaker, relationship
 from sqlalchemy import JSON, BigInteger, Text, Boolean, TIMESTAMP
 from sqlalchemy.exc import OperationalError
 from pathlib import Path
+from cryptography.fernet import Fernet
+from server.config import ENCRYPTION_KEY
 
 db_dir = Path(__file__).parent.parent
 db_path = db_dir / "taskflow.db"
 DATABASE_URL = f"sqlite:///{db_path}"
+
+# Encryption Helper
+class EncryptedString(TypeDecorator):
+    """Encrypts string values on the way in and decrypts them on the way out."""
+    impl = Text
+    cache_ok = True
+
+    def __init__(self, key=None, **kwargs):
+        super().__init__(**kwargs)
+        self.key = key or ENCRYPTION_KEY
+        if self.key:
+            self.fernet = Fernet(self.key)
+        else:
+            self.fernet = None
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if not self.fernet:
+            return value  # Fallback if no key provided (dev only)
+        if isinstance(value, str):
+            value = value.encode('utf-8')
+        return self.fernet.encrypt(value).decode('utf-8')
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        if not self.fernet:
+            return value
+        try:
+            return self.fernet.decrypt(value.encode('utf-8')).decode('utf-8')
+        except Exception:
+            # Return raw value if decryption fails (e.g. plain text data mixed with encrypted)
+            return value
 
 engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
 mapper_registry = registry()
@@ -26,11 +63,11 @@ class User(Base):
     updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
 
     # Google OAuth Credentials
-    google_token: Mapped[str | None] = mapped_column(Text)
-    google_refresh_token: Mapped[str | None] = mapped_column(Text)
+    google_token: Mapped[str | None] = mapped_column(EncryptedString)
+    google_refresh_token: Mapped[str | None] = mapped_column(EncryptedString)
     google_token_uri: Mapped[str | None] = mapped_column(Text)
     google_client_id: Mapped[str | None] = mapped_column(Text)
-    google_client_secret: Mapped[str | None] = mapped_column(Text)
+    google_client_secret: Mapped[str | None] = mapped_column(EncryptedString)
     google_scopes: Mapped[list[str] | None] = mapped_column(JSON)
     
     # Relationships

@@ -12,3 +12,4 @@ openai>=1.0
 gunicorn>=21.2
 psycopg2-binary>=2.9
 PyJWT>=2.8
+cryptography>=46.0.3
