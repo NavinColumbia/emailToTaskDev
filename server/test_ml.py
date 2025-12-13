@@ -4,7 +4,7 @@ Test script for ML classification and task generation.
 Usage: python3 test_ml.py
 """
 
-from server.ml import classify_and_generate_task, clean_html_to_text
+from server.ml import ml_decide, clean_html_to_text
 import os
 from pathlib import Path
 from dotenv import load_dotenv
@@ -111,7 +111,7 @@ def test_classification():
         print()
         
         # Classify
-        result = classify_and_generate_task(payload)
+        result = ml_decide(payload)
         
         # Display results
         should_create = result.get("should_create", True)
