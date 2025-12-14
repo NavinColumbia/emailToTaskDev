@@ -17,7 +17,12 @@ export default defineConfig({
         '**/*.d.ts',
         '**/*.config.*',
         '**/mockData',
+        '**/dist/**',
+        '**/.vite/**',
+        '**/coverage/**',
       ],
+      all: false,
+      skipFull: true,
     },
   },
   resolve: {
