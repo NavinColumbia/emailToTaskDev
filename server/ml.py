@@ -1,18 +1,9 @@
-"""
-ML module for email classification and task generation.
-Uses OpenAI API to:
-1. Classify whether an email should become a task
-2. Generate appropriate task title and body from email content
-3. Detect whether an email should lead to a meeting
-4. Generate appropriate meeting details from email
-"""
-
 from __future__ import annotations
 import os
 import json
 import re
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -274,7 +265,15 @@ Rules:
     }
 
 
-def ml_decide(payload: Dict[str, Any], task_categories=None, calendar_categories=None) -> Dict[str, Any]:
+def ml_decide(
+    payload: Dict[str, Any],
+    task_categories: list[str] | list[dict] | None = None,
+    calendar_categories: list[str] | list[dict] | None = None,
+) -> Dict[str, Any]:
+    """
+    Main entry point for email classification.
+    Uses environment variables for configuration.
+    """
     subject = payload.get("subject", "(No subject)")
     sender = payload.get("sender", "Unknown")
 
@@ -288,7 +287,6 @@ def ml_decide(payload: Dict[str, Any], task_categories=None, calendar_categories
             "reasoning": "OpenAI library not available, fallback",
             "meeting": {"is_meeting": False, "summary": "", "location": "", "start_datetime": "", "end_datetime": "", "participants": [], "category": None},
         }
-
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         return {

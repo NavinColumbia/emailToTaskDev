@@ -17,7 +17,6 @@ except json.JSONDecodeError as e:
 
 REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:5001/oauth2callback")
 DEFAULT_PROVIDER = os.getenv("DEFAULT_TASK_PROVIDER", "google_tasks")
-DEFAULT_FETCH_LIMIT = int(os.getenv("FETCH_LIMIT", "10"))
 TASKS_LIST_TITLE = os.getenv("TASKS_LIST_TITLE", "Email Tasks")
 FLASK_SECRET = os.getenv("FLASK_SECRET", "dev-change-me")
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")

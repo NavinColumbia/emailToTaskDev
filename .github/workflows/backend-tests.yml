@@ -1,0 +1,91 @@
+name: Backend Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-tests.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'server/**'
+      - '.github/workflows/backend-tests.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Cache pip packages
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('server/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+
+    - name: Install dependencies
+      run: |
+        cd server
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -r requirements-test.txt
+
+    - name: Set up test environment
+      env:
+        FLASK_ENV: test
+        FLASK_SECRET: test-secret-key
+        ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw' }}
+        GOOGLE_CLIENT_SECRETS_JSON: '{"web": {"client_id": "test", "client_secret": "test", "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token"}}'
+        OPENAI_API_KEY: test-key
+        OPENAI_MODEL: gpt-4o-mini
+      run: |
+        echo "Test environment configured"
+
+    - name: Run tests with pytest
+      env:
+        FLASK_ENV: test
+        FLASK_SECRET: test-secret-key
+        ENCRYPTION_KEY: ${{ secrets.ENCRYPTION_KEY || 'dGVzdC1lbmNyeXB0aW9uLWtleS0xMjM0NTY3ODkw' }}
+        GOOGLE_CLIENT_SECRETS_JSON: '{"web": {"client_id": "test", "client_secret": "test", "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token"}}'
+        OPENAI_API_KEY: test-key
+        OPENAI_MODEL: gpt-4o-mini
+      run: |
+        cd server
+        pytest tests/ -v --cov=. --cov-report=xml --cov-report=html --cov-report=term
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./server/coverage.xml
+        flags: backend
+        name: backend-coverage
+        fail_ci_if_error: false
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: backend-coverage-report
+        path: server/htmlcov/
