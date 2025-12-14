@@ -24,13 +24,34 @@ def test_get_settings_authenticated_no_settings(authenticated_client, test_db, s
 
 def test_get_settings_authenticated_with_settings(authenticated_client, test_db, sample_user):
     """Test getting existing settings."""
-    # Create settings first
+    # First, ensure the user exists (get_current_user creates it if needed)
+    # Then create settings for that user
     with test_db() as s:
-        from server.db import UserSettings
+        from server.db import UserSettings, User
+        from sqlalchemy import select
         from datetime import datetime, timezone
         
+        # Get or create the user to ensure it exists
+        stmt = select(User).where(User.email == "test@example.com")
+        user = s.execute(stmt).scalar_one_or_none()
+        if not user:
+            user = User(
+                email="test@example.com",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            s.add(user)
+            s.flush()
+        
+        # Delete existing settings if any
+        stmt = select(UserSettings).where(UserSettings.user_id == user.id)
+        existing = s.execute(stmt).scalar_one_or_none()
+        if existing:
+            s.delete(existing)
+        
+        # Create new settings
         settings = UserSettings(
-            user_id=sample_user,
+            user_id=user.id,
             provider="google_tasks",
             max=20,
             window="7d",

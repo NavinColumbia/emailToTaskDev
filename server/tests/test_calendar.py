@@ -12,8 +12,57 @@ def test_get_all_calendar_events_unauthenticated(client):
     assert response.status_code == 401
 
 
-def test_get_all_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email, sample_calendar_event):
+def test_get_all_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
     """Test getting all calendar events with authentication."""
+    # Create calendar event with proper user and email relationship
+    with test_db() as s:
+        from server.db import CalendarEvent, Email, User
+        from sqlalchemy import select
+        
+        # Get or ensure user exists
+        stmt = select(User).where(User.email == "test@example.com")
+        user = s.execute(stmt).scalar_one_or_none()
+        if not user:
+            user = User(
+                email="test@example.com",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            s.add(user)
+            s.flush()
+        
+        # Get or create email
+        stmt = select(Email).where(Email.gmail_message_id == "test_message_id_123")
+        email = s.execute(stmt).scalar_one_or_none()
+        if not email:
+            email = Email(
+                user_id=user.id,
+                gmail_message_id="test_message_id_123",
+                subject="Test Email Subject",
+                sender="sender@example.com",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            s.add(email)
+            s.flush()
+        
+        # Create calendar event
+        event = CalendarEvent(
+            user_id=user.id,
+            email_id=email.id,
+            google_event_id="test_event_id_123",
+            summary="Test Meeting",
+            location="Test Location",
+            start_datetime=datetime.now(timezone.utc),
+            end_datetime=datetime.now(timezone.utc),
+            html_link="https://calendar.google.com/test",
+            provider_metadata={"id": "test_event_id_123"},
+            status="created",
+            created_at=datetime.now(timezone.utc),
+        )
+        s.add(event)
+        s.flush()
+    
     response = authenticated_client.get_auth("/calendar-events/all")
     assert response.status_code == 200
     data = response.get_json()
@@ -60,15 +109,40 @@ def test_delete_calendar_events_unauthenticated(client):
     assert response.status_code == 401
 
 
-def test_delete_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email, sample_calendar_event):
+def test_delete_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
     """Test deleting calendar events with authentication."""
+    # Create a calendar event in the test
+    with test_db() as s:
+        from server.db import CalendarEvent, Email
+        
+        email = Email(
+            user_id=sample_user,
+            gmail_message_id="test_msg_delete",
+            subject="Delete Test",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        s.add(email)
+        s.flush()
+        
+        event = CalendarEvent(
+            user_id=sample_user,
+            email_id=email.id,
+            summary="Delete Me",
+            status="created",
+            created_at=datetime.now(timezone.utc),
+        )
+        s.add(event)
+        s.flush()
+        event_id = event.id
+    
     with patch('server.routers.calendar.get_calendar_service') as mock_service:
         mock_calendar_service = MagicMock()
         mock_service.return_value = mock_calendar_service
         
         response = authenticated_client.delete_auth(
             "/calendar-events",
-            json={"event_ids": [sample_calendar_event]}
+            json={"event_ids": [event_id]}
         )
         assert response.status_code == 200
         data = response.get_json()
@@ -78,10 +152,23 @@ def test_delete_calendar_events_authenticated(authenticated_client, test_db, sam
 def test_confirm_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
     """Test confirming pending calendar events."""
     with test_db() as s:
-        from server.db import CalendarEvent, Email
+        from server.db import CalendarEvent, Email, User
+        from sqlalchemy import select
+        
+        # Get or ensure user exists
+        stmt = select(User).where(User.email == "test@example.com")
+        user = s.execute(stmt).scalar_one_or_none()
+        if not user:
+            user = User(
+                email="test@example.com",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            s.add(user)
+            s.flush()
         
         email = Email(
-            user_id=sample_user,
+            user_id=user.id,
             gmail_message_id="test_msg_pending",
             subject="Meeting Invitation",
             created_at=datetime.now(timezone.utc),
@@ -91,7 +178,7 @@ def test_confirm_calendar_events_authenticated(authenticated_client, test_db, sa
         s.flush()
         
         event = CalendarEvent(
-            user_id=sample_user,
+            user_id=user.id,
             email_id=email.id,
             summary="Pending Meeting",
             status="pending",

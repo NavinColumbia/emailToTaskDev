@@ -70,7 +70,7 @@ def test_prepare_email_content_long_body():
     }
     
     content = prepare_email_content(payload)
-    assert len(content["body"]) <= 2002  # 2000 + "..."
+    assert len(content["body"]) <= 2003  # 2000 + "..." (3 chars)
 
 
 @patch('server.ml.OpenAI')

@@ -92,11 +92,25 @@ def test_confirm_tasks_unauthenticated(client):
 
 def test_confirm_tasks_authenticated(authenticated_client, test_db, sample_user, sample_email):
     """Test confirming pending tasks."""
+    # Ensure user exists first
     with test_db() as s:
-        from server.db import Task, Email
+        from server.db import Task, Email, User
+        from sqlalchemy import select
+        
+        # Get or ensure user exists
+        stmt = select(User).where(User.email == "test@example.com")
+        user = s.execute(stmt).scalar_one_or_none()
+        if not user:
+            user = User(
+                email="test@example.com",
+                created_at=datetime.now(timezone.utc),
+                updated_at=datetime.now(timezone.utc),
+            )
+            s.add(user)
+            s.flush()
         
         email = Email(
-            user_id=sample_user,
+            user_id=user.id,
             gmail_message_id="test_msg_pending",
             subject="Pending Task",
             created_at=datetime.now(timezone.utc),
@@ -106,7 +120,7 @@ def test_confirm_tasks_authenticated(authenticated_client, test_db, sample_user,
         s.flush()
         
         task = Task(
-            user_id=sample_user,
+            user_id=user.id,
             email_id=email.id,
             provider="google_tasks",
             status="pending",
