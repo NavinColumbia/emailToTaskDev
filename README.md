@@ -2,6 +2,8 @@
 
 A platform that automatically converts Gmail emails into Google Tasks and Google Calendar events. Uses AI-powered classification to intelligently decide which emails should become tasks and automatically creates calendar events for meetings. Built as part of a group project for an assignment at Columbia University.
 
+**Tech Stack**: TypeScript/React frontend with Vite, Python/Flask backend
+
 ## ✨ Features
 
 - **🔐 Secure Gmail Integration**: OAuth2 authentication with Google (credentials encrypted at rest)
@@ -24,6 +26,7 @@ A platform that automatically converts Gmail emails into Google Tasks and Google
 - Google account with Gmail, Google Tasks, and Google Calendar access
 - OpenAI API key (for AI-powered classification and task generation)
 - Node.js and npm (for frontend development)
+- TypeScript (installed via npm)
 
 ### Installation
 
@@ -33,29 +36,45 @@ A platform that automatically converts Gmail emails into Google Tasks and Google
    cd emailToTaskDev
    ```
 
-2. **Make the setup script executable and run it**
+2. **Install dependencies**
+   ```bash
+   # Install frontend dependencies (TypeScript/React)
+   cd client
+   npm install
+   cd ..
+   
+   # Install backend dependencies (Python)
+   cd server
+   pip3 install -r requirements.txt
+   cd ..
+   ```
+
+   **Note**: If you have a setup script, you can also use:
    ```bash
    chmod +x setup.sh
    ./setup.sh
    ```
 
-   The setup script will:
-   - Install all Python dependencies
-   - Guide you through Google OAuth setup
-   - Create environment variables
-
 3. **Start the application**
+   
+   Using npm (recommended - runs both frontend and backend):
    ```bash
-   python3 server/app.py
+   npm run dev  
    ```
    
-   Or use npm scripts:
+   Or start separately:
    ```bash
-   npm run dev  # Runs both frontend and backend
+   # Terminal 1: Start backend
+   cd server
+   python3 app.py
+   
+   # Terminal 2: Start frontend
+   cd client
+   npm run dev
    ```
 
 4. **Open your browser**
-   Navigate to `http://localhost:5001`
+   Navigate to `http://localhost:5173` (frontend) - the backend API runs on `http://localhost:5001`
 
 ## 🔧 Manual Setup
 
@@ -64,6 +83,12 @@ If you prefer manual setup or the script doesn't work:
 ### 1. Install Dependencies
 
 ```bash
+# Frontend (TypeScript/React)
+cd client
+npm install
+cd ..
+
+# Backend (Python/Flask)
 cd server
 pip3 install -r requirements.txt
 cd ..
@@ -88,7 +113,7 @@ cd ..
 2. Create a new API key
 3. Copy the key (you won't be able to see it again)
 
-### 5. Environment Configuration
+### 4. Environment Configuration
 
 Create a `.env` file:
 
@@ -129,21 +154,25 @@ FRONTEND_URL=http://localhost:5173
 
 1. Go to the "Settings" tab
 2. Configure default preferences:
-   - **Default Max Emails**: Set default maximum emails to process (default: 10)
+   - **Default Max Emails**: Set default maximum emails to process (default: 10, leave empty for no limit)
    - **Default Time Window**: Set default time window for email search (default: Last 24 hours)
+   - **Auto-generate tasks and calendar events**: Toggle automatic creation (default: enabled)
+   - **Task Categories**: Add categories to filter which emails become tasks (if none selected, all emails are considered)
+   - **Calendar Categories**: Add categories to filter which emails become calendar events (if none selected, all emails are considered)
 3. Click "Save Settings" to save your preferences
 
 ### 3. Process Emails
 
 1. Go to the "Process Emails" tab
 2. Configure your search parameters:
-   - **Task Provider**: Choose Google Tasks (default)
    - **Max Emails**: Set how many emails to process at once (defaults to your saved setting or 10)
-   - **Time Window**: Filter emails by date range (defaults to Last 24 hours, or choose 7 days, 30 days, or all)
+   - **Time Window**: Filter emails by date range:
+     - All emails
+     - Last 24 hours
+     - Last 7 days
+     - Last 30 days
+     - Custom: Select a specific date and time using the date/time picker
    - **Custom Query**: Use Gmail search syntax for advanced filtering (optional)
-   - **Since Hours**: Filter emails from the last N hours (e.g., "24h", "1.5h", "90m")
-   - **Since Date**: Filter emails from a specific ISO date (e.g., "2025-01-15T00:00:00Z")
-   - **Dry Run**: Test without actually creating tasks
 3. Click "Process Emails" to start processing
 
 ### 4. View Results
@@ -180,13 +209,14 @@ The application will:
 | `DB_DIR` | Directory for SQLite database | `/tmp` (Cloud Run) or local |
 | `RECREATE_DB` | Recreate database on startup | `false` |
 
-**Note:** `FETCH_LIMIT` is defined in the code but not currently used. The maximum number of emails to process is controlled by user settings (default: 10) or the `max` parameter in API requests.
-
 ### Default Settings
 
 When a user first accesses the application, default settings are applied:
 - **Default Max Emails**: 10
 - **Default Time Window**: Last 24 hours (1d)
+- **Auto-generate**: Enabled (automatically creates tasks and calendar events)
+- **Task Categories**: None (all emails are considered)
+- **Calendar Categories**: None (all emails are considered)
 
 These can be customized in the Settings page.
 

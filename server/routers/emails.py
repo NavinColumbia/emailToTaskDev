@@ -6,7 +6,7 @@ import logging
 from server.utils import get_gmail_service, get_current_user, message_to_payload, require_auth
 from server.config import DEFAULT_PROVIDER, TASKS_LIST_TITLE
 from server.db import db_session, Email, Task, CalendarEvent, UserSettings
-from server.ml import ml_decide, normalize_categories
+from server.ml import ml_decide
 from server.providers.google_tasks import create_task as create_google_task, GoogleTasksError
 from sqlalchemy import select
 
@@ -153,6 +153,9 @@ def get_or_create_email(session, user_id: int, message_id: str, meta: dict | Non
 def task_exists(session, user_id: int, email_id: int, provider: str) -> bool:
     return session.query(Task.id).filter_by(user_id=user_id, email_id=email_id, provider=provider).first() is not None
 
+def calendar_event_exists(session, user_id: int, email_id: int) -> bool:
+    return session.query(CalendarEvent.id).filter_by(user_id=user_id, email_id=email_id).first() is not None
+
 def dispatch_task(provider: str, payload: dict) -> dict:
     from server.utils import get_tasks_service
     if provider == "google_tasks":
@@ -286,12 +289,8 @@ def fetch_emails():
         stmt = select(UserSettings).where(UserSettings.user_id == user.id)
         user_settings = s.execute(stmt).scalar_one_or_none()
         auto_generate = user_settings.auto_generate if user_settings and user_settings.auto_generate is not None else True
-        # Normalize categories to ensure we pass full {name, description} objects to ml_decide
-        # This handles backward compatibility with old string format in database
-        task_categories_raw = user_settings.task_categories if user_settings else []
-        calendar_categories_raw = user_settings.calendar_categories if user_settings else []
-        task_categories = normalize_categories(task_categories_raw)
-        calendar_categories = normalize_categories(calendar_categories_raw)
+        task_categories = user_settings.task_categories if user_settings else []
+        calendar_categories = user_settings.calendar_categories if user_settings else []
 
     logger.info(f"Auto-generate setting: {auto_generate}")
 
@@ -345,133 +344,142 @@ def fetch_emails():
             meeting_info = ml_result.get("meeting")
             calendar_event = None
             if meeting_info and meeting_info.get("is_meeting"):
-                logger.info(
-                    f"Processing calendar event - Email ID: {message_id_short} | "
-                    f"Subject: '{subject}' | "
-                    f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}' | "
-                    f"Auto-generate: {auto_generate}"
-                )
-                
-                if auto_generate:
-                    # Create calendar event in Google Calendar
-                    calendar_event = create_google_calendar_event(meeting_info, client_timezone)
-                    if calendar_event:
+                # Check if calendar event already exists for this email
+                if calendar_event_exists(s, user.id, email_row.id):
+                    logger.info(
+                        f"Calendar event already exists - Email ID: {message_id_short} | "
+                        f"Subject: '{subject}' | "
+                        f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
+                    )
+                    already_processed_count += 1
+                else:
+                    logger.info(
+                        f"Processing calendar event - Email ID: {message_id_short} | "
+                        f"Subject: '{subject}' | "
+                        f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}' | "
+                        f"Auto-generate: {auto_generate}"
+                    )
+                    
+                    if auto_generate:
+                        # Create calendar event in Google Calendar
+                        calendar_event = create_google_calendar_event(meeting_info, client_timezone)
+                        if calendar_event:
+                            logger.info(
+                                f"Calendar event created successfully - Email ID: {message_id_short} | "
+                                f"Event ID: {calendar_event.get('id')} | "
+                                f"Summary: '{calendar_event.get('summary', 'N/A')}'"
+                            )
+                            # Save calendar event to database
+                            start_dt = None
+                            end_dt = None
+                            event_timezone_str = calendar_event.get("start", {}).get("timeZone")
+                            event_tz = resolve_client_timezone(event_timezone_str) if event_timezone_str else timezone.utc
+                            
+                            if calendar_event.get("start", {}).get("dateTime"):
+                                try:
+                                    parsed_start = dateutil_parser.isoparse(calendar_event["start"]["dateTime"])
+                                    if parsed_start.tzinfo is None:
+                                        parsed_start = parsed_start.replace(tzinfo=event_tz)
+                                    start_dt = parsed_start.astimezone(timezone.utc)
+                                except Exception:
+                                    pass
+                            if calendar_event.get("end", {}).get("dateTime"):
+                                try:
+                                    parsed_end = dateutil_parser.isoparse(calendar_event["end"]["dateTime"])
+                                    if parsed_end.tzinfo is None:
+                                        parsed_end = parsed_end.replace(tzinfo=event_tz)
+                                    end_dt = parsed_end.astimezone(timezone.utc)
+                                except Exception:
+                                    pass
+                            
+                            cal_event = CalendarEvent(
+                                user_id=user.id,
+                                email_id=email_row.id,
+                                google_event_id=calendar_event.get("id"),
+                                summary=calendar_event.get("summary", "Meeting"),
+                                location=calendar_event.get("location"),
+                                start_datetime=start_dt,
+                                end_datetime=end_dt,
+                                html_link=calendar_event.get("htmlLink"),
+                                provider_metadata=calendar_event,
+                                status="created",
+                                category=category_from_request or meeting_info.get("category"),
+                            )
+                            s.add(cal_event)
+                            
+                            created_calendar_events.append({
+                                "summary": calendar_event.get("summary", "Meeting"),
+                                "htmlLink": calendar_event.get("htmlLink"),
+                                "start": calendar_event.get("start", {}).get("dateTime"),
+                                "location": calendar_event.get("location"),
+                            })
+                        else:
+                            logger.warning(
+                                f"Calendar event creation failed - Email ID: {message_id_short} | "
+                                f"Subject: '{subject}' | "
+                                f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
+                            )
+                    else:
+                        # Create pending calendar event (don't create in Google Calendar yet)
                         logger.info(
-                            f"Calendar event created successfully - Email ID: {message_id_short} | "
-                            f"Event ID: {calendar_event.get('id')} | "
-                            f"Summary: '{calendar_event.get('summary', 'N/A')}'"
+                            f"Creating pending calendar event - Email ID: {message_id_short} | "
+                            f"Subject: '{subject}' | "
+                            f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
                         )
-                        # Save calendar event to database
+                        
+                        # Prepare event data for later creation
                         start_dt = None
                         end_dt = None
-                        event_timezone_str = calendar_event.get("start", {}).get("timeZone")
-                        event_tz = resolve_client_timezone(event_timezone_str) if event_timezone_str else timezone.utc
+                        user_tz = resolve_client_timezone(client_timezone)
                         
-                        if calendar_event.get("start", {}).get("dateTime"):
+                        if meeting_info.get("start_datetime"):
                             try:
-                                parsed_start = dateutil_parser.isoparse(calendar_event["start"]["dateTime"])
-                                if parsed_start.tzinfo is None:
-                                    parsed_start = parsed_start.replace(tzinfo=event_tz)
-                                start_dt = parsed_start.astimezone(timezone.utc)
+                                parsed_start = parse_datetime_with_timezone(meeting_info["start_datetime"], user_tz)
+                                if parsed_start:
+                                    start_dt = parsed_start.astimezone(timezone.utc)
                             except Exception:
                                 pass
-                        if calendar_event.get("end", {}).get("dateTime"):
+                        
+                        if meeting_info.get("end_datetime"):
                             try:
-                                parsed_end = dateutil_parser.isoparse(calendar_event["end"]["dateTime"])
-                                if parsed_end.tzinfo is None:
-                                    parsed_end = parsed_end.replace(tzinfo=event_tz)
-                                end_dt = parsed_end.astimezone(timezone.utc)
+                                parsed_end = parse_datetime_with_timezone(meeting_info["end_datetime"], user_tz)
+                                if parsed_end:
+                                    end_dt = parsed_end.astimezone(timezone.utc)
                             except Exception:
                                 pass
+                        
+                        # Create pending event with metadata for later creation
+                        pending_event_metadata = {
+                            "summary": meeting_info.get("summary", "Meeting"),
+                            "location": meeting_info.get("location"),
+                            "start_datetime": meeting_info.get("start_datetime"),
+                            "end_datetime": meeting_info.get("end_datetime"),
+                            "participants": meeting_info.get("participants", []),
+                            "client_timezone": client_timezone,
+                        }
                         
                         cal_event = CalendarEvent(
                             user_id=user.id,
                             email_id=email_row.id,
-                            google_event_id=calendar_event.get("id"),
-                            summary=calendar_event.get("summary", "Meeting"),
-                            location=calendar_event.get("location"),
+                            google_event_id=None,
+                            summary=meeting_info.get("summary", "Meeting"),
+                            location=meeting_info.get("location"),
                             start_datetime=start_dt,
                             end_datetime=end_dt,
-                            html_link=calendar_event.get("htmlLink"),
-                            provider_metadata=calendar_event,
-                            status="created",
+                            html_link=None,
+                            provider_metadata=pending_event_metadata,
+                            status="pending",
                             category=category_from_request or meeting_info.get("category"),
                         )
                         s.add(cal_event)
                         
                         created_calendar_events.append({
-                            "summary": calendar_event.get("summary", "Meeting"),
-                            "htmlLink": calendar_event.get("htmlLink"),
-                            "start": calendar_event.get("start", {}).get("dateTime"),
-                            "location": calendar_event.get("location"),
+                            "summary": meeting_info.get("summary", "Meeting"),
+                            "htmlLink": None,
+                            "start": meeting_info.get("start_datetime"),
+                            "location": meeting_info.get("location"),
+                            "status": "pending",
                         })
-                    else:
-                        logger.warning(
-                            f"Calendar event creation failed - Email ID: {message_id_short} | "
-                            f"Subject: '{subject}' | "
-                            f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
-                        )
-                else:
-                    # Create pending calendar event (don't create in Google Calendar yet)
-                    logger.info(
-                        f"Creating pending calendar event - Email ID: {message_id_short} | "
-                        f"Subject: '{subject}' | "
-                        f"Meeting Summary: '{meeting_info.get('summary', 'N/A')}'"
-                    )
-                    
-                    # Prepare event data for later creation
-                    start_dt = None
-                    end_dt = None
-                    user_tz = resolve_client_timezone(client_timezone)
-                    
-                    if meeting_info.get("start_datetime"):
-                        try:
-                            parsed_start = parse_datetime_with_timezone(meeting_info["start_datetime"], user_tz)
-                            if parsed_start:
-                                start_dt = parsed_start.astimezone(timezone.utc)
-                        except Exception:
-                            pass
-                    
-                    if meeting_info.get("end_datetime"):
-                        try:
-                            parsed_end = parse_datetime_with_timezone(meeting_info["end_datetime"], user_tz)
-                            if parsed_end:
-                                end_dt = parsed_end.astimezone(timezone.utc)
-                        except Exception:
-                            pass
-                    
-                    # Create pending event with metadata for later creation
-                    pending_event_metadata = {
-                        "summary": meeting_info.get("summary", "Meeting"),
-                        "location": meeting_info.get("location"),
-                        "start_datetime": meeting_info.get("start_datetime"),
-                        "end_datetime": meeting_info.get("end_datetime"),
-                        "participants": meeting_info.get("participants", []),
-                        "client_timezone": client_timezone,
-                    }
-                    
-                    cal_event = CalendarEvent(
-                        user_id=user.id,
-                        email_id=email_row.id,
-                        google_event_id=None,
-                        summary=meeting_info.get("summary", "Meeting"),
-                        location=meeting_info.get("location"),
-                        start_datetime=start_dt,
-                        end_datetime=end_dt,
-                        html_link=None,
-                        provider_metadata=pending_event_metadata,
-                        status="pending",
-                        category=category_from_request or meeting_info.get("category"),
-                    )
-                    s.add(cal_event)
-                    
-                    created_calendar_events.append({
-                        "summary": meeting_info.get("summary", "Meeting"),
-                        "htmlLink": None,
-                        "start": meeting_info.get("start_datetime"),
-                        "location": meeting_info.get("location"),
-                        "status": "pending",
-                    })
             
             # Skip if ML decides not to create task
             if not should_create:

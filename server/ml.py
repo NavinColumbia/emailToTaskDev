@@ -1,18 +1,9 @@
-"""
-ML module for email classification and task generation.
-Uses OpenAI API to:
-1. Classify whether an email should become a task
-2. Generate appropriate task title and body from email content
-3. Detect whether an email should lead to a meeting
-4. Generate appropriate meeting details from email
-"""
-
 from __future__ import annotations
 import os
 import json
 import re
 import logging
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional
 from bs4 import BeautifulSoup
 
 logger = logging.getLogger(__name__)
@@ -75,71 +66,15 @@ def prepare_email_content(payload: Dict[str, Any]) -> Dict[str, str]:
     }
 
 
-def normalize_categories(raw: list[str] | list[dict] | None) -> list[dict[str, str]]:
-    """
-    Normalize category input to a consistent format.
-    
-    Args:
-        raw: Either a list of strings or a list of dicts with keys like
-             name, label, and optional description
-    
-    Returns:
-        A list of dicts with normalized shape: [{"name": str, "description": str}, ...]
-        Ignores empty names, and defaults description to "" if missing.
-    """
-    if not raw:
-        return []
-    
-    normalized = []
-    for item in raw:
-        if isinstance(item, str):
-            # Simple string category
-            if item.strip():
-                normalized.append({"name": item.strip(), "description": ""})
-        elif isinstance(item, dict):
-            # Rich category object
-            # Try 'name' first, then 'label' as fallback
-            name = item.get("name") or item.get("label") or ""
-            if name and isinstance(name, str) and name.strip():
-                description = item.get("description", "")
-                if not isinstance(description, str):
-                    description = ""
-                normalized.append({
-                    "name": name.strip(),
-                    "description": description.strip() if description else ""
-                })
-    
-    return normalized
-
-
 def classify_and_generate_task(
     payload: Dict[str, Any],
     api_key: Optional[str] = None,
     model: str = "gpt-4o-mini",
-    task_categories: list[str] | list[dict] | None = None,
-    calendar_categories: list[str] | list[dict] | None = None,
+    task_categories: list[str] | None = None,
+    calendar_categories: list[str] | None = None,
 ) -> Dict[str, Any]:
     """
     Main function to classify email and generate task details and meetings.
-    
-    Args:
-        payload: Email payload containing subject, body, html, snippet, sender
-        api_key: OpenAI API key (falls back to OPENAI_API_KEY env var)
-        model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
-    
-    Returns:
-        Dictionary with:
-        - should_create: bool - whether to create a task
-        - confidence: float - confidence score (0-1)
-        - title: str - generated task title
-        - notes: str - generated task description/body
-        - reasoning: str - explanation of classification decision
-        - title: str - generated task title
-        - notes: str - generated task description/body
-        - reasoning: str - explanation of classification decision
-        - category: str | None - selected task category
-        - meeting: dictoniary indicating if it should create a meeting, location, start and end time and participants.
-          - category: str | None - selected calendar category
     """
     subject = payload.get("subject", "(No subject)")
     
@@ -174,33 +109,17 @@ def classify_and_generate_task(
     sender = payload.get("sender", "Unknown")
     subject = email_content.get("subject", "(No subject)")
     
-    # Normalize categories to consistent format
-    normalized_task_cats = normalize_categories(task_categories)
-    normalized_cal_cats = normalize_categories(calendar_categories)
-    
-    # Log normalized categories for debugging
-    logger.debug(
-        f"Normalized task categories: {len(normalized_task_cats)} categories "
-        f"({sum(1 for c in normalized_task_cats if c['description'])}) with descriptions"
-    )
-    logger.debug(
-        f"Normalized calendar categories: {len(normalized_cal_cats)} categories "
-        f"({sum(1 for c in normalized_cal_cats if c['description'])}) with descriptions"
-    )
-    
     # Format categories as blocks for prompt
-    if normalized_task_cats:
+    if task_categories:
         task_categories_block = "Available Task Categories:\n" + "\n".join(
-            f"  - {cat['name']}" + (f": {cat['description']}" if cat['description'] else "")
-            for cat in normalized_task_cats
+            f"  - {cat}" for cat in task_categories if cat and isinstance(cat, str)
         )
     else:
         task_categories_block = "Available Task Categories: None"
     
-    if normalized_cal_cats:
+    if calendar_categories:
         calendar_categories_block = "Available Calendar Categories:\n" + "\n".join(
-            f"  - {cat['name']}" + (f": {cat['description']}" if cat['description'] else "")
-            for cat in normalized_cal_cats
+            f"  - {cat}" for cat in calendar_categories if cat and isinstance(cat, str)
         )
     else:
         calendar_categories_block = "Available Calendar Categories: None"
@@ -390,8 +309,8 @@ For task notes:
 
 def ml_decide(
     payload: Dict[str, Any],
-    task_categories: list[str] | list[dict] | None = None,
-    calendar_categories: list[str] | list[dict] | None = None,
+    task_categories: list[str] | None = None,
+    calendar_categories: list[str] | None = None,
 ) -> Dict[str, Any]:
     """
     Main entry point for email classification.
