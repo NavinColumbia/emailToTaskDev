@@ -92,16 +92,19 @@ def test_confirm_tasks_unauthenticated(client):
 
 def test_confirm_tasks_authenticated(authenticated_client, test_db):
     """Test confirming pending tasks."""
-    # Use get_or_create_user to ensure we use the same user that get_current_user() will find
+    # First, ensure user exists
+    from server.utils import get_or_create_user
+    with test_db() as s:
+        user = get_or_create_user(s, "test@example.com")
+        user_id = user.id
+        s.commit()
+    
+    # Now create task for that user
     with test_db() as s:
         from server.db import Task, Email
-        from server.utils import get_or_create_user
-        
-        # Get or create user (same way route handlers do it)
-        user = get_or_create_user(s, "test@example.com")
         
         email = Email(
-            user_id=user.id,
+            user_id=user_id,
             gmail_message_id="test_msg_pending",
             subject="Pending Task",
             created_at=datetime.now(timezone.utc),
@@ -111,7 +114,7 @@ def test_confirm_tasks_authenticated(authenticated_client, test_db):
         s.flush()
         
         task = Task(
-            user_id=user.id,
+            user_id=user_id,
             email_id=email.id,
             provider="google_tasks",
             status="pending",
