@@ -22,28 +22,19 @@ def test_get_settings_authenticated_no_settings(authenticated_client, test_db, s
     assert data["calendar_categories"] == []
 
 
-def test_get_settings_authenticated_with_settings(authenticated_client, test_db, sample_user):
+def test_get_settings_authenticated_with_settings(authenticated_client, test_db):
     """Test getting existing settings."""
-    # First, ensure the user exists (get_current_user creates it if needed)
-    # Then create settings for that user
+    # Use get_or_create_user to ensure we use the same user that get_current_user() will find
     with test_db() as s:
-        from server.db import UserSettings, User
-        from sqlalchemy import select
+        from server.db import UserSettings
+        from server.utils import get_or_create_user
         from datetime import datetime, timezone
         
-        # Get or create the user to ensure it exists
-        stmt = select(User).where(User.email == "test@example.com")
-        user = s.execute(stmt).scalar_one_or_none()
-        if not user:
-            user = User(
-                email="test@example.com",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            s.add(user)
-            s.flush()
+        # Get or create user (same way route handlers do it)
+        user = get_or_create_user(s, "test@example.com")
         
         # Delete existing settings if any
+        from sqlalchemy import select
         stmt = select(UserSettings).where(UserSettings.user_id == user.id)
         existing = s.execute(stmt).scalar_one_or_none()
         if existing:

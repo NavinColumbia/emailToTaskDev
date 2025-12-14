@@ -12,39 +12,28 @@ def test_get_all_calendar_events_unauthenticated(client):
     assert response.status_code == 401
 
 
-def test_get_all_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
+def test_get_all_calendar_events_authenticated(authenticated_client, test_db):
     """Test getting all calendar events with authentication."""
     # Create calendar event with proper user and email relationship
+    # Use get_or_create_user to ensure we use the same user that get_current_user() will find
     with test_db() as s:
-        from server.db import CalendarEvent, Email, User
-        from sqlalchemy import select
+        from server.db import CalendarEvent, Email
+        from server.utils import get_or_create_user
         
-        # Get or ensure user exists
-        stmt = select(User).where(User.email == "test@example.com")
-        user = s.execute(stmt).scalar_one_or_none()
-        if not user:
-            user = User(
-                email="test@example.com",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            s.add(user)
-            s.flush()
+        # Get or create user (same way route handlers do it)
+        user = get_or_create_user(s, "test@example.com")
         
-        # Get or create email
-        stmt = select(Email).where(Email.gmail_message_id == "test_message_id_123")
-        email = s.execute(stmt).scalar_one_or_none()
-        if not email:
-            email = Email(
-                user_id=user.id,
-                gmail_message_id="test_message_id_123",
-                subject="Test Email Subject",
-                sender="sender@example.com",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            s.add(email)
-            s.flush()
+        # Create email
+        email = Email(
+            user_id=user.id,
+            gmail_message_id="test_message_id_123",
+            subject="Test Email Subject",
+            sender="sender@example.com",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc),
+        )
+        s.add(email)
+        s.flush()
         
         # Create calendar event
         event = CalendarEvent(
@@ -109,14 +98,18 @@ def test_delete_calendar_events_unauthenticated(client):
     assert response.status_code == 401
 
 
-def test_delete_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
+def test_delete_calendar_events_authenticated(authenticated_client, test_db):
     """Test deleting calendar events with authentication."""
     # Create a calendar event in the test
     with test_db() as s:
         from server.db import CalendarEvent, Email
+        from server.utils import get_or_create_user
+        
+        # Get or create user (same way route handlers do it)
+        user = get_or_create_user(s, "test@example.com")
         
         email = Email(
-            user_id=sample_user,
+            user_id=user.id,
             gmail_message_id="test_msg_delete",
             subject="Delete Test",
             created_at=datetime.now(timezone.utc),
@@ -126,7 +119,7 @@ def test_delete_calendar_events_authenticated(authenticated_client, test_db, sam
         s.flush()
         
         event = CalendarEvent(
-            user_id=sample_user,
+            user_id=user.id,
             email_id=email.id,
             summary="Delete Me",
             status="created",
@@ -149,23 +142,14 @@ def test_delete_calendar_events_authenticated(authenticated_client, test_db, sam
         assert data["deleted_count"] == 1
 
 
-def test_confirm_calendar_events_authenticated(authenticated_client, test_db, sample_user, sample_email):
+def test_confirm_calendar_events_authenticated(authenticated_client, test_db):
     """Test confirming pending calendar events."""
     with test_db() as s:
-        from server.db import CalendarEvent, Email, User
-        from sqlalchemy import select
+        from server.db import CalendarEvent, Email
+        from server.utils import get_or_create_user
         
-        # Get or ensure user exists
-        stmt = select(User).where(User.email == "test@example.com")
-        user = s.execute(stmt).scalar_one_or_none()
-        if not user:
-            user = User(
-                email="test@example.com",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            s.add(user)
-            s.flush()
+        # Get or create user (same way route handlers do it)
+        user = get_or_create_user(s, "test@example.com")
         
         email = Email(
             user_id=user.id,

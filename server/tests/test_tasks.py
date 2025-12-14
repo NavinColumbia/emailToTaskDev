@@ -90,24 +90,15 @@ def test_confirm_tasks_unauthenticated(client):
     assert response.status_code == 401
 
 
-def test_confirm_tasks_authenticated(authenticated_client, test_db, sample_user, sample_email):
+def test_confirm_tasks_authenticated(authenticated_client, test_db):
     """Test confirming pending tasks."""
-    # Ensure user exists first
+    # Use get_or_create_user to ensure we use the same user that get_current_user() will find
     with test_db() as s:
-        from server.db import Task, Email, User
-        from sqlalchemy import select
+        from server.db import Task, Email
+        from server.utils import get_or_create_user
         
-        # Get or ensure user exists
-        stmt = select(User).where(User.email == "test@example.com")
-        user = s.execute(stmt).scalar_one_or_none()
-        if not user:
-            user = User(
-                email="test@example.com",
-                created_at=datetime.now(timezone.utc),
-                updated_at=datetime.now(timezone.utc),
-            )
-            s.add(user)
-            s.flush()
+        # Get or create user (same way route handlers do it)
+        user = get_or_create_user(s, "test@example.com")
         
         email = Email(
             user_id=user.id,
