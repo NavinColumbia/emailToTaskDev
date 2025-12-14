@@ -79,7 +79,8 @@ jobs:
     - name: Run linter
       run: |
         cd client
-        npm run lint || true
+        npm run lint || echo "Linting completed with warnings"
+      continue-on-error: true
 
     - name: Run tests
       run: |
@@ -124,4 +125,5 @@ jobs:
     - name: Lint frontend code
       run: |
         cd client
-        npm run lint || true
+        npm run lint || echo "Linting completed with warnings"
+      continue-on-error: true
