@@ -56,7 +56,7 @@ def test_get_settings_authenticated_with_settings(authenticated_client, test_db)
             updated_at=datetime.now(timezone.utc),
         )
         s.add(settings)
-        s.flush()
+        s.commit()  # Explicitly commit to ensure data is visible
     
     response = authenticated_client.get_auth("/settings")
     assert response.status_code == 200

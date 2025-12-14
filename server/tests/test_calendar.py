@@ -31,6 +31,7 @@ def test_get_all_calendar_events_authenticated(authenticated_client, test_db):
             gmail_message_id="test_message_id_123",
             subject="Test Email Subject",
             sender="sender@example.com",
+            received_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -52,7 +53,7 @@ def test_get_all_calendar_events_authenticated(authenticated_client, test_db):
             created_at=datetime.now(timezone.utc),
         )
         s.add(event)
-        s.flush()
+        s.commit()  # Explicitly commit to ensure data is visible
     
     response = authenticated_client.get_auth("/calendar-events/all")
     assert response.status_code == 200
@@ -117,6 +118,7 @@ def test_delete_calendar_events_authenticated(authenticated_client, test_db):
             user_id=user_id,
             gmail_message_id="test_msg_delete",
             subject="Delete Test",
+            received_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -131,7 +133,7 @@ def test_delete_calendar_events_authenticated(authenticated_client, test_db):
             created_at=datetime.now(timezone.utc),
         )
         s.add(event)
-        s.flush()
+        s.commit()  # Explicitly commit to ensure data is visible
         event_id = event.id
     
     with patch('server.routers.calendar.get_calendar_service') as mock_service:
@@ -163,6 +165,7 @@ def test_confirm_calendar_events_authenticated(authenticated_client, test_db):
             user_id=user_id,
             gmail_message_id="test_msg_pending",
             subject="Meeting Invitation",
+            received_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -183,7 +186,7 @@ def test_confirm_calendar_events_authenticated(authenticated_client, test_db):
             created_at=datetime.now(timezone.utc),
         )
         s.add(event)
-        s.flush()
+        s.commit()  # Explicitly commit to ensure data is visible
         event_id = event.id
     
     with patch('server.routers.calendar.get_calendar_service') as mock_service:

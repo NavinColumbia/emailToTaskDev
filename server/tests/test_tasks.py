@@ -107,6 +107,7 @@ def test_confirm_tasks_authenticated(authenticated_client, test_db):
             user_id=user_id,
             gmail_message_id="test_msg_pending",
             subject="Pending Task",
+            received_at=datetime.now(timezone.utc),
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
         )
@@ -127,7 +128,7 @@ def test_confirm_tasks_authenticated(authenticated_client, test_db):
             created_at=datetime.now(timezone.utc),
         )
         s.add(task)
-        s.flush()
+        s.commit()  # Explicitly commit to ensure data is visible
         task_id = task.id
     
     with patch('server.routers.tasks.get_tasks_service') as mock_service:
