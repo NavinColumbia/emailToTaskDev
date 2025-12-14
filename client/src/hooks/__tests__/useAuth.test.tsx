@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor } from '@testing-library/react';
 import { useAuth } from '../useAuth';
 import * as apiModule from '../../apis/api';
 
@@ -35,7 +35,9 @@ describe('useAuth', () => {
     const isAuth = await result.current.checkAuth();
     
     expect(isAuth).toBe(true);
-    expect(result.current.authenticated).toBe(true);
+    await waitFor(() => {
+      expect(result.current.authenticated).toBe(true);
+    });
     expect(apiModule.api.checkAuth).toHaveBeenCalledOnce();
   });
 
@@ -47,7 +49,9 @@ describe('useAuth', () => {
     const isAuth = await result.current.checkAuth();
     
     expect(isAuth).toBe(false);
-    expect(result.current.authenticated).toBe(false);
+    await waitFor(() => {
+      expect(result.current.authenticated).toBe(false);
+    });
   });
 
   it('should call authorize', async () => {
@@ -62,15 +66,23 @@ describe('useAuth', () => {
 
   it('should call logout and set authenticated to false', async () => {
     vi.mocked(apiModule.api.logout).mockResolvedValue(undefined);
+    // Mock checkAuth to return true first to set authenticated to true
+    vi.mocked(apiModule.api.checkAuth).mockResolvedValue(true);
     
     const { result } = renderHook(() => useAuth());
     
-    // Set authenticated to true first
-    result.current.authenticated = true;
+    // Set authenticated to true first by calling checkAuth
+    await result.current.checkAuth();
+    await waitFor(() => {
+      expect(result.current.authenticated).toBe(true);
+    });
     
+    // Now test logout
     await result.current.logout();
     
     expect(apiModule.api.logout).toHaveBeenCalledOnce();
-    expect(result.current.authenticated).toBe(false);
+    await waitFor(() => {
+      expect(result.current.authenticated).toBe(false);
+    });
   });
 });

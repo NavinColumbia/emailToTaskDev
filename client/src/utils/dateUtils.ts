@@ -3,6 +3,9 @@ export function formatDate(dateString: string | null | undefined): string {
   
   try {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString.slice(0, 10);
+    }
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     
@@ -21,6 +24,9 @@ export function formatDateTime(dateString: string | null | undefined): string {
   
   try {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString.slice(0, 10);
+    }
     return date.toLocaleString('en-US', { 
       month: 'short', 
       day: 'numeric', 
@@ -38,6 +44,9 @@ export function formatDateOnly(dateString: string | null | undefined): string {
   
   try {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return dateString.slice(0, 10);
+    }
     const now = new Date();
     const isToday = date.toDateString() === now.toDateString();
     
@@ -68,6 +77,9 @@ export function formatTimeOnly(dateString: string | null | undefined): string {
   
   try {
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return '—';
+    }
     return date.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
