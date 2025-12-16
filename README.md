@@ -220,6 +220,30 @@ When a user first accesses the application, default settings are applied:
 
 These can be customized in the Settings page.
 
+## 🧪 Testing
+
+### Frontend Tests
+
+Frontend tests use Vitest and React Testing Library. To run tests:
+
+```bash
+cd client
+npm test                 # Run tests in watch mode
+npm run test:ui          # Run tests with UI interface
+npm run test:coverage    # Run tests with coverage report
+```
+
+### Backend Tests
+
+Backend tests use pytest. To run tests:
+
+```bash
+cd server
+pip install -r requirements-test.txt  # Install test dependencies
+pytest tests/ -v                      # Run all tests with verbose output
+pytest tests/ --cov=. --cov-report=term  # Run tests with coverage report
+```
+
 ## 🚀 Production Deployment
 
 ### Google Cloud Run Deployment
