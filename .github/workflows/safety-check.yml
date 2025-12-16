@@ -15,5 +15,12 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Security vulnerabilities scan
-        uses: aufdenpunkt/python-safety-check@master
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install safety
+          pip install -r server/requirements.txt
+
+      - name: Run safety check
+        run: |
+          safety check -r server/requirements.txt
