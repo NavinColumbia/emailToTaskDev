@@ -317,3 +317,13 @@ If OpenAI API is unavailable or not configured:
 - Original email subject becomes task title
 - Original email body becomes task description
 
+## 👥 Team Members
+
+- **Emanuela Romano** (`er2788`)
+- **Gautam Agarwal** (`ga2726`)
+- **Ron Zimmermann** (`rjz2117`)
+- **Navinashok Swaminathan** (`ns3886`)
+- **Blanca Valera** (`bv2358`)
+- **Diya Roongta** (`dr3281`)
+
+
